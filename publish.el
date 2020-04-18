@@ -248,7 +248,7 @@
               :base-extension "org"
               :publishing-directory "./public"
               :publishing-function 'dang/org-rss-publish-to-rss
-              :html-link-home "https://daniel-grumberg.github.io/"
+              :html-link-home "https://www.dangrumberg.com"
               :html-link-use-abs-url t
               :auto-sitemap t
               :sitemap-style 'list
@@ -279,7 +279,7 @@
               :base-extension "org"
               :publishing-directory "./public"
               :publishing-function 'dang/org-rss-publish-to-rss
-              :html-link-home "https://daniel-grumberg.github.io/"
+              :html-link-home "https://www.dangrumberg.com"
               :html-link-use-abs-url t)
 
         (list "site"
