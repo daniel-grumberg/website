@@ -1,0 +1,7 @@
+#+TITLE: Daniel Grumberg's homepage
+
+The deployment for this website is all pretty self-contained, you just need a recent emacs installation (tested with 26.3).
+In order to generate the pages all you need to do is grab the sources from [[https://github.com/daniel-grumberg/website][here]] and use the provided Makefile.
+Emacs will take care of fetching the latest dependencies and generating the website in the public directory.
+Don't worry though, this won't make changes to your configuration, as the Makefile ignores your own ~.emacs~ or ~.emacs.d/init.el~ and uses the provided ~publish.el~ to download packages and to build the website.
+You should read ~publish.el~ if you are interested in how to emulate this setup.

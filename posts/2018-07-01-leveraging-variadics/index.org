@@ -1,0 +1,382 @@
+#+TITLE: Leveraging algebraic types in C++
+#+AUTHOR: Daniel Grumberg
+#+DATE: <2018-07-01 Sun>
+
+* Introduction
+
+Today, we will be looking at the new flagship variadic types that are offered in modern C++ [[http://en.cppreference.com/w/cpp/utility/tuple][~std::tuple~]] and [[http://en.cppreference.com/w/cpp/utility/variant/variant][~std::variant~]].
+This post is not meant to teach you how to implement your own variadic templates, if you are into that check out my [[file: ../variadic-templates/index.org][previous post]].
+Instead, I focus on demonstrating the usage of the standard library's own variadic types, so don't sweat it if you are not a template meta-programming expert.
+
+One of the main reasons variadic templates were introduced to the language in the C++11 standard was to enable the definitions of the product and sum types.
+People refer to these as algebraic types due to the connection to algebra and set theory, but don't let that scare you away.
+These are namely, ~std::tuple~ (introduced in C++11) and ~std::variant~ (introduced C++17) in that order.
+
+Tuples are what you would expect if you have encountered them in other languages.
+If you have never seen them before, they represent the Cartesian product of the provided template parameters (think of it as an anonymous struct with anonymous fields).
+Variants aim to implement a better alternative to C-style unions.
+
+Defining algebraic types was possible before C++11, but was somewhat convoluted and the usage was often unintuitive.
+If you have ever implemented or dealt with typelists you will know what I mean.
+However, we can now make use of the standard library's robust implementation of these ideas to easily improve the safety and readability of our code.
+
+* Tuples
+
+As you know, we can not return multiple values from a function in C++.
+To tackle this issue, we often define structs to encapsulate all the values we wish to return.
+When we do this we often define useful abstractions in the problem domain, but there are a lot of cases where this introduces syntactic overhead.
+Tuples are very interesting in this context.
+They allow us to pass/return multiple logically grouped values at once without the burden of defining a type for this purpose.
+Furthermore, they allow us to create compound types programmatically according to user input which can be an incredibly useful facility.
+
+** API
+
+The API is super simple, it provides constructors, destructor, a specialisation of the swap algorithm and comparison operators that operate lexicographically.
+It also provides ~tuple_cat~ which concatenates any number of tuples into one big tuple, and ~forward_as_tuple~ which takes a bunch of r-value references and forwards them as a tuple of r-value references.
+It also provides the nifty ~make_tuple~ which allows us to deduce the type of the tuple we are trying to instantiate, essentially it allows us to write ~auto t = std::make_tuple(1u, 1.0f, true)~ where ~t~ is deduced to be of type ~tuple<unsigned, float, bool>~.
+
+The one thing I have not touched upon is how to read individual values out of a tuple.
+There are essentially three ways of doing this:
+
+- If you want to read a single value out, your best option is ~get~, which given a zero-based index will return a reference to the value contained in the tuple, the usage is a as follows:
+
+  #+BEGIN_SRC cpp
+    auto t = std::make_tuple(1u, 1.0f, true);
+    auto f = std::get<1>(t); // f now has value 1.0f
+  #+END_SRC
+
+- If you want to read all the values in a tuple inside local variables, you should use ~tie~ instead of getting each value individually:
+
+  #+BEGIN_SRC cpp
+    auto t = std::make_tuple(1u, 1.0f, true);
+    unsigned u; float f;
+    std::tie(u, f, std::ignore) = t; // u now contains 1u and f contains 1.0f
+  #+END_SRC
+
+It achieves this seemingly magical behaviour by creating and returning a tuple of references to the provided variables.
+The assignment happens simply through the tuple assignment operator between unrelated tuples.
+Here ~ignore~ is a special value that acts as a placeholder for values we are not interested in.
+
+- The only problem with ~tie~ is that you have to pre-declare your variables and provide the types yourself.
+This can lead to nasty surprises with implicit type conversions.
+If you have a C++17 compliant compiler, you should use the new structured bindings feature instead.
+These are now part of the language syntax so you can not implement them in user code, but the usage it lets type-inference work its magic, which provides the correct type for the variables:
+
+#+BEGIN_SRC cpp
+    auto t = std::make_tuple(1u, 1.0f, true);
+    auto [u, f, dummy] = t; // u now contains 1u and f contains 1.0f and dummy is true
+#+END_SRC
+
+The only issue with this is that you can not ignore values in the tuple.
+In the above snippet the compiler would complain about ~dummy~ not being used in later code unless you supply ~-Wunused-variable~ to the compiler which you might not want to do.
+
+** Automatic memoization
+
+Automatic memoization is quite a neat example of the increased type safety and convenience we can achieve using tuples.
+Imagine we wanted to write an automatic function memoizer in C++98, a possible implementation could look as follows:
+
+#+BEGIN_SRC cpp
+  template < class Out, class Inputs, class InputsCmp = std::less<Inputs> >
+  struct Memoizer
+  {
+  public:
+      typedef Out (*fn_type)(Inputs);
+      Memoizer(fn_type fn) : fn_(fn) { }
+      Out operator()(Inputs inputs)
+      {
+          typename Cache::iterator cache_val = cache_.find(inputs);
+          if (cache_val == cache_.end())
+          {
+              Out res = fn_(inputs);
+              cache_[inputs] = res;
+              return res;
+          }
+          std::cout << "Cache hit" << std::endl;
+          return cache_val->second;
+      }
+
+  private:
+      typedef std::map<Inputs, Out, InputsCmp> Cache;
+      fn_type fn_;
+      Cache cache_;
+  };
+#+END_SRC
+
+This is how I would go about defining an automatic memoizer in strict C++98.
+The idea here is to define a functor object responsible for maintaining the cache of calls to some function ~fn~ that is passed in as a function pointer.
+The trouble here, is that ~fn~ can only accept one argument.
+A solution for this to write create wrappers for multi-argument functions that accept their arguments as a single struct.
+We then need to provide either a specialisation of ~std::less~ for our input type, or a custom comparator functor.
+The latter is the option I prefer, but I don't have a have a real justification for this.
+This how we can wrap a call to a simple two argument function:
+
+#+BEGIN_SRC cpp
+  float simple_func(int a, float b);
+
+  struct SimpleFuncIn
+  {
+      int a_;
+      float b_;
+      SimpleFuncIn(int a, float b) : a_(a), b_(b) { }
+  };
+
+  struct SimpleFuncCmp
+  {
+      bool operator()(SimpleFuncIn const& lhs, SimpleFuncIn const& rhs) const
+      {
+          if (lhs.a_ == rhs.a_) return lhs.b_ < rhs.b_;
+          return lhs.a_ < rhs.a_;
+      }
+  };
+
+  static float simple_func_wrap(SimpleFuncIn inputs)
+  {
+      return simple_func(inputs.a_, inputs.b_);
+  }
+#+END_SRC
+
+And then somewhere later in the code, we can use our brand-new =Memoizer= like this:
+
+#+BEGIN_SRC cpp
+  Memoizer<float, SimpleFuncIn, SimpleFuncCmp> memoized_func_old(&simple_func_wrap);
+  ...
+  memoized_func_old(SimpleFuncIn(1, 2));
+#+END_SRC
+
+As a little aside, we can build a nifty little factory function for ~Memoizer~ that will deduce the template parameters for us.
+A crude implementation could look like this:
+
+#+BEGIN_SRC cpp
+  template < class Out, class In, class InCmp >
+  Memoizer<Out, In, InCmp> build_memo(Out (*fn)(In), InCmp cmp = std::less<In>())
+  {
+      return Memoizer<Out, In, InCmp>(fn);
+  }
+#+END_SRC
+
+We see here that there is some syntactic overhead in the usage of our automatic memoizer.
+We can use tuples and variadic templates to represent arbitrary function calls in the same way that uncurrying functions works in functional programming languages.
+These new features as well as lambdas and automatic type inference can really help us in reducing the syntactic overhead of defining and using automatic memoization:
+
+#+BEGIN_SRC cpp
+  template <typename R, typename... Args>
+  decltype(auto) memoize(R (*fn)(Args...))
+  {
+      std::map<std::tuple<Args...>, R> cache;
+
+      return [=](Args... args) mutable -> R
+      {
+          auto arg_tuple = std::make_tuple(args...);
+          auto cache_val = cache.find(arg_tuple);
+          if (cache_val == cache.end())
+          {
+              auto res = fn(args...);
+              cache[arg_tuple] = res;
+              return res;
+          }
+          std::cout << "Cache hit" << std::endl;
+          return cache_val->second;
+      };
+  }
+#+END_SRC
+
+We don't need to define our own memoizer type as we can simply return a lambda that will have the same functionality.
+We use tuples to represent the arguments to the function and variadic templates to allow an arbitrary number them.
+The main logic is largely unchanged a part from the usage of ~std::make_tuple~ to "uncurry" the call and provide a single object for the arguments the same way our wrapper struct worked in the C++98 example.
+
+The usage is incredibly simple and does not require us to specify a bunch of template parameters or to define custom types and comparators:
+
+#+BEGIN_SRC cpp
+  auto memoized_func = memoize(simple_func);
+  ...
+  memoized_func(1, 2);
+#+END_SRC
+
+* Variants
+** API
+
+A variant can only contain one of its underlying types, or in case of an error no value (this is quite hard to achieve, as it only happens if an initialization operation on the underlying storage throws an exception).
+However you can easily detect this state by calling ~valueless_by_exception~ on the variant instance.
+This is a big step up over the traditional ~union~ type as it makes holding non POD (plain old data) types automatic, and it has well defined semantics for errors when constructing those complex types.
+The API for ~std::variant~ is very simple, it provides, the usual suspects (constructors, destructor, assignment operator, and swap) and some more peculiar operations:
+
+- ~emplace~ allows us to construct values inside the variant, in place.
+- ~index~ gives the zero-based index of the alternative in the variant.
+- ~valueless_by_exception~ checks if the variant is in an error state.
+
+You also get a bunch of non-member functions that provide incredibly useful functionality:
+
+- comparison operators compare variants as their contained values - ~holds_alternative~ given a template type, tells us if the variant currently contains it.
+- ~get~ given an index or a type (if it is unique in the alternative list) returns a reference to the value contained by the variant if it matches the given type index otherwise throws an error.
+- ~get_if~ does the same as get but returns a pointer to the value in the variant, otherwise it returns a null pointer.
+- ~visit~ applies the given functor to all the variants provided as arguments, it is only valid if the functor is valid for all alternatives in the variant.
+
+You can of course find more about this on [[http://en.cppreference.com/w/cpp/utility/variant][cppreference]].
+
+** Using Variants to improve type-safety
+
+An interesting application of variant types is to concisely and elegantly define finite state machines and many associated patterns.
+This allows us to implement the Type State pattern and eliminate an entire class of common bugs.
+I will show an interesting example I extended from Ben Deane's CppCon16 [[https://www.youtube.com/watch?v=ojZbFIQSdl8][talk]].
+The following snippet is something you might find in any older codebase, that can be improved through the usage of variants:
+
+#+BEGIN_SRC cpp
+  enum class ConnectionState
+  {
+      DISCONNECTED,
+      CONNECTING,
+      CONNECTED,
+      CONNECTION_INTERRUPTED
+  }
+
+  struct Connection
+  {
+      ConnectionState m_connectionState;
+
+      // Notify all the Connection's observers of the interuption
+      void notifyInterrupted();
+
+      std::string m_serverAddress;
+      ConnectionId m_id;
+      std::chrono::system_clock::time_point m_connectedTime;
+      std::chrono::milliseconds m_lastPingTime;
+      Timer m_reconnectTimer;
+  }
+#+END_SRC
+
+This looks like it works quite well on the surface, but the important thing to realise here is that certain fields of ~Connection~ only make sense in certain connection states.
+For example, ~m_connectedTime~ only makes sense in the ~CONNECTED~ state, worse even, people often will reuse that field to mean disconnected time in the ~CONNECTION_INTERRUPTED~ state only documenting through a comment or not all.
+Similarly ~m_lastPingTime~ only makes sense in the ~CONNECTED~ state and ~m_reconnectTimer~ only has adds value in the ~CONNECTION_INTERRUPTED~ state.
+The trouble here is that the programmer has to ensure that all field accesses are predicated by checks to the current connection state and we need discipline to ensure we don't reuse fields in states they weren't meant for.
+Variants are quite useful here as they allow us to tie data to the underlying state.
+A nice reworking of the above code would be:
+
+#+BEGIN_SRC cpp
+  struct Connection
+  {
+      std::string m_serverAddress;
+
+      struct Disconnected { };
+      struct Connecting { };
+      struct Connected
+      {
+          std::chrono::system_clock::time_point m_connectedTime;
+          std::chrono::milliseconds m_lastPingTime;
+      };
+      struct ConnectionInterrupted
+      {
+          std::chrono::system_clock::time_point m_disconnectedTime;
+          Timer m_reconnectTimer;
+      };
+
+      // Notify all the Connection's observers of the interuption
+      void notifyInterrupted();
+
+      typedef state_t std::variant<Disconnected,
+          Connecting,
+          Connected,
+          ConnectionInterrupted>;
+
+      state_t m_connection;
+  }
+#+END_SRC
+
+The advantage of this version is the tighter coupling between the connection state and the relevant data.
+Thus state transition are much cleaner as we can not leave unrelated fields in limbo any more, which is something Ben mentioned in his talk.
+Furthermore, a variant occupies roughly as much space as the largest underlying type, which means that we reduced the memory footprint of the ~Connection~ struct.
+
+In this implementation, a state transition is made by assigning a value to the variant.
+We could represent the disconnection state transition by a simple method in the ~Connection~ struct:
+
+#+BEGIN_SRC cpp
+  void disconnect() {
+      m_connection = Disconnected();
+  }
+#+END_SRC
+
+This is a very simple scheme, but we can run into issues when the state transition depends on the current state.
+To implement this using simple member functions, we would need to manually check for the current connection and implement messy conditions inside each transition method.
+Instead, we can model this kind of behaviour using the ~visit~ API of the variant type.
+We can then create a functor for each event type we want to implement, for example we can implement the ~InterruptedEvent~ as follows:
+
+#+BEGIN_SRC cpp
+  struct InterruptedEvent {
+      InterruptedEvent(Connection& c) : m_c(c) { }
+
+      Connection::state_t operator() (const Connection::Disconnected& s) { return s; }
+      Connection::state_t operator() (const Connection::Connecting& s) { return Connection::Disconnected(); }
+      Connection::state_t operator() (const Connection::Connected& s) {
+          const auto now = std::chrono::system_clock::now();
+          m_c.notifyInterrupted();
+          return Connection::ConnectionInterrupted{now, 100};
+      }
+      Connection::state_t operator() (const Connection::ConnectionInterrupted& s) { return s; }
+
+  private:
+      Connection& m_c;
+#+END_SRC
+
+We can then implement the transition:
+
+#+BEGIN_SRC cpp
+  template <typename T>
+  void transition() {
+      m_connection = std::visit(T(*this), m_connection);
+  }
+#+END_SRC
+
+This requires each T to conform to the requirements of events.
+Let's take ~InterruptedEvent~ as an example.
+To make this work, the ~InterruptedEvent~ must provide an overload of ~operator()~ for each variant alternative.
+We also construct it with a reference to the underlying ~Connection~ to enable it to use its API.
+In this pattern it is often desirable to perform state entry actions in the constructors of the variant alternatives.
+
+An alternative to the visitation scheme is to have all the variant alternatives inherit from a class defining stub for all the FSM transitions.
+We can then implement each transition as members of the ~Connection~ class.
+Let's look at the implementation of interruption in this scheme:
+
+#+BEGIN_SRC cpp
+  void interrupt() {
+      const auto ind = m_connection.index();
+      auto curr_state = std::get<ind>(m_connection);
+      curr_state.interrupt();
+  }
+#+END_SRC
+
+I personally prefer the visitor method as it decouples the transitions from the actual connection state.
+It allows us to keep related functionality in the same class.
+Furthermore with C++17 we don't need to define a separate type for the state transition functor.
+We can leverage lambdas and the new ~if constexpr~ statements to get the best of both worlds as detailed below:
+
+#+BEGIN_SRC cpp
+  void interrupt() {
+      m_connection = std::visit([&](auto& s) {
+          using T = std::decay<decltype(s)>;
+          if constexpr (std::is_same_v<T, Connected) {
+              const auto now = std::chrono::system_clock::now();
+              notifyInterrupted();
+              return ConnectionInterrupted{ now, 100 };
+          }
+          else if constexpr (std::is_same_v<T, Connecting>) {
+              return Disconnected();
+          }
+          else
+          {
+              return s;
+          }
+      }, m_connection);
+  }
+#+END_SRC
+
+I personally prefer to define the functor explicitly as we are then able to create new state transitions without having to touch the implementation of the ~Connection~ class and thus not add methods to its public API.
+However, this is largely a matter of taste.
+
+We were able to eliminate an entire class of bugs in our finite state machine, reduce its memory footprint and improve the readability of state transitions.
+I don't know about you, but I am finding this pretty exciting!
+
+* Conclusion
+
+C++ finally has a complete set of algebraic data-types.
+They are not quite as general as what you would find in functional programming languages, notably we can not define recursive variants.
+However, they still enable interesting improvements to everyday code bases ranging form eliminating bugs, to reducing memory usage.
+Furthermore, their main advantage is that they allow us to explicitly state the intent behind our design and thus improve the readability of the code we write.

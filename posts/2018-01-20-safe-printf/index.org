@@ -1,0 +1,158 @@
+#+TITLE: A safer printf with variadic templates
+#+AUTHOR: Daniel GRumberg
+#+DATE: <2018-01-10 Wed>
+
+* Introduction
+
+How many of you use the ~printf~ family of functions? Quite a lot, I assume.
+The functions come with some advantages over the standard output streams (~cout~, ~cerr~, etc): - They are plain C and write directly to the underlying POSIX file descriptor, they are thus thread-safe.
+- They are somewhat faster as they don't rely on operator overloading and thus dynamic dispatch through virtual function tables.
+This StackOverflow [[https://stackoverflow.com/questions/17671772/c11-variadic-printf-performance][post]] should give you some numbers if you care.
+Most people probably don't/shouldn't care about this.
+- They are ubiquitous, well-known, and specifying precision and width is arguably simpler than it is in the stream idiom.
+
+However, ~printf~ and all its friends suffer from one big drawback, type safety, which keeps bringing people back to streams.
+Have you ever provided ~printf~ or worse ~scanf~ the wrong format string for what you were trying to achieve? I know I have...
+
+All standard C libraries implement ~printf~ using the ~va_arg~ family of macros.
+Beyond being cumbersome, and error-prone to use, they delegate all the argument typing and "checking" to the run-time program.
+Most people agree that typing is better left to compile-time, where mistakes and errors are caught before the program gets a chance to run.
+Since C++11, we have variadic templates to help us with implementing such functions.
+
+Quite a few people have proposed implementations of type-safe ~printf~ alternatives.
+I will not consider here things like ~boost::format~ or the ~fmt~ library as they implement a new formatting string language and I am only exploring in drop-in replacements for ~printf~.
+The most notable discussion of this topic was done by Andrei Alexandrescu in [[https://www.youtube.com/watch?v~_zgq6_zFNGY][this talk]] at Going Native 2012.
+He proposes a nice and simple two-step approach with one traversal of the string and arguments to type check them, and then just delegates the functionality to ~std::printf~.
+He argues the checks can be easily disabled in release mode through the use of the ~NDEBUG~ macro to avoid any performance overhead.
+This approach works great, as no one ever uses ~printf~ to print large strings.
+However, I will be presenting a skeleton implementation for checking the arguments in place to explore implementing a safe ~printf~ from first principles as a go to facility for outputting to ~stdout~.
+The main drawback of my approach is that all the characters in the format string until the invalid format specifier are outputted anyway.
+If you do care about this a lot, Alexandrescu's approach is better suited to your needs.
+
+Before you proceed any further you need to make sure you know how to use variadic templates in C++, if you are new to the topic or if you need a quick refresher you might want to check out my introductory [[file:%7B%7B%20site.baseurl%20%7D%7D%7B%%20post_url%202017-12-26-variadic-templates%20%%7D][post]] to the topic.
+
+* Argument normalisation
+
+The first thing we have to notice, that ~printf~ performs argument normalization.
+Indeed, any integral type is considered to be a ~long~ (unless specified otherwise with width modifiers) and every floating point number is a ~double~ (again unless specified otherwise).
+Furthermore, we want to allow users to natively be able to format ~std::string~.
+I choose to implement this functionality through a templated function as follows:
+
+#+BEGIN_SRC cpp
+  template <typename T>
+  typename std::enable_if<std::is_integral<T>::value, long>::type
+  normalize_arg(T arg) { return arg; }
+
+  template <typename T>
+  typename std::enable_if<std::is_floating_point<T>::value, double>::type
+  normalize_arg(T arg) { return arg; }
+
+  template <typename T>
+  typename std::enable_if<std::is_pointer<T>::value, T>::type
+  normalize_arg(T arg) { return arg; }
+
+  const char* normalize_arg(std::string const& str) { return str.c_str(); }
+#+END_SRC
+
+The aim here is to cast types having a certain trait to one of the types discussed above.
+We use the convenient [[http://en.cppreference.com/w/cpp/types/enable_if][~std::enable_if~]] to overload the return type of ~normalize_args~ based on traits of the template type.
+We also provide an overload that fully specialises the template where we convert ~std::string~ to its underlying C-style string.
+We need to do this because for simplicity reasons as we plan to delegate the actual formatting to ~printf~.
+Of course, if we were going to implement the functionality from first principles this is an unnecessary restriction.
+
+* Printing to standard out
+
+Once we have the argument normalisation building block we are able to define the shape of our top level ~safe_printf~ as follows:
+
+#+BEGIN_SRC cpp
+  template <typename ...Params>
+  void safe_printf(const char *str, Params const& ...parameters)
+  {
+      flockfile(stdout);
+      safe_printf_impl(str, normalize_arg(parameters)...);
+      funlockfile(stdout);
+  }
+#+END_SRC
+
+As mentioned earlier, the ~printf~ family of functions works well with concurrent processes because they acquire the file lock associated with ~stdout~.
+The simplest implementation of this functionality I could think of is wrapping the main body of work with calls to ~flockfile~ and ~funlockfile~ from the C standard library in the ~stdio.h~ header.
+Let's now take a look at the main implementation:
+
+#+BEGIN_SRC cpp
+  void safe_printf_impl(const char *str) {
+      // We already own the lock so we might as well use the unlocked version
+      for(; *str && (*str != '%' || *(++str) == '%'); ++str) putchar_unlocked(*str);
+
+      if (*str) throw std::runtime_error("Too few arguments were passed to safe_printf");
+  }
+#+END_SRC
+
+The above code snippet represents the base case of the compile-time recursion.
+The purpose here, is to keep printing the rest of the format string if we run out of formatting parameters.
+The last line of this function throws a ~std::runtime_error~ if we detect a format specifier in the format string.
+This is because we cannot format missing parameters and thus the call to ~safe_printf~ is invalid and does not type-check.
+
+#+BEGIN_SRC cpp
+  template <typename Param, typename ...Params>
+  void safe_printf_impl(const char *str, Param parameter, Params... parameters)
+  {
+      // We already own the lock so we might as well use the unlocked version
+      for(; *str && (*str != '%' || *(++str) == '%'); ++str) putchar_unlocked(*str);
+
+      validate_type_parameter<Param>(*str);
+      const char format[3] = {'%', *str, '\0'};
+      printf(format, parameter);
+
+      safe_printf_impl(++str, parameters...);
+  }
+#+END_SRC
+
+If we have a list of at least one parameter to format, we want to output the characters in the format string as usual until we hit a format specifier.
+We then proceed to make sure that the specifier agrees with the type of the first parameter.
+If this check succeeds we can format the parameter as usual.
+The last line is interesting as we now "recurse" (we are calling a different template instantiation) to process the remainder of the string with the remainder of the parameters.
+
+I chose to use type traits to implement ~validate_type_parameter~ I find it a more expressive technique for checking type properties.
+An alternative to this scheme is to specify a template specialisation for each possible type check inside each one if the format specifier is correct.
+My implementation is given below:
+
+#+BEGIN_SRC cpp
+  #define ENFORCE(A) if (!(A)) throw std::runtime_error("Type did not match format specifier")
+
+  template <typename Param>
+  void validate_type_parameter(char format_specifier)
+  {
+      switch(format_specifier)
+      {
+          default: throw std::runtime_error("Invalid format specifier, only f, d and s are allowed");
+          case 'f':
+              ENFORCE(std::is_floating_point<Param>::value);
+              break;
+          case 'd':
+              ENFORCE(std::is_integral<Param>::value);
+              break;
+          case 's':
+              constexpr bool is_valid_c_str
+                  = std::is_same<Param, const char *>::value || std::is_same<Param, char *>::value;
+              ENFORCE(is_valid_c_str);
+              break;
+      }
+  }
+#+END_SRC
+
+* Conclusion
+
+The cool thing is that C++ supports template argument deduction, which allows you to to truly use this implementation as a drop-in replacement for ~printf~.
+This achieves exactly what we want in the sense that we just aim to check if the arguments we supplied can be correctly printed using the supplied format string.
+Here is a quick example of how this implementation behaves:
+
+#+BEGIN_SRC cpp
+  std::string world("world");
+  safe_printf("Hello %s!. I am %f%% sure this works.\n", world, 0.99f); // This works as expected
+  safe_printf("Hello %s!. I am %f%% sure this works%s.\n", world, 0.99f); // This fails
+  safe_printf("Hello %s!. I am %d%% sure this works.\n", world, 0.99f); // This fails as well
+#+END_SRC
+
+The implementation of ~safe_printf~ I just presented does not implement, the full ~printf~ functionality.
+But the main idea for a drop-in replacement of classic ~printf~ is shown.
+Also, I would like to find a way of avoiding to produce output for invalid calls without otherwise introducing buffering that would not happen in the first place, if anyone knows how get in touch via email or in the comments section of this [[https://gist.github.com/daniel-grumberg/15a76740aa82f38638efe95a5ad90605][gist]] that has the full code.
