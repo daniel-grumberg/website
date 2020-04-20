@@ -8,7 +8,13 @@ I don't guarantee that anything here works or is factually correct, but do shoot
 
 You can find the source that I use to generate this webpage using Emacs [[https://github.com/daniel-grumberg/daniel-grumberg.github.io][here]].
 
-** Contacts
+* Latest Posts
+
+#+INCLUDE: posts/posts.org
+
+You can find the full list at [[file:posts/archive.org][my blog]].
+
+* Contacts
 - [[mailto:dany.grumberg@gmail.com][Email]]
 - [[https://github.com/daniel-grumberg][Github]]
 - [[https://twitter.com/danygrumberg][Twitter]]

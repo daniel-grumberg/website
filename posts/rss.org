@@ -2,11 +2,11 @@
 
 * * <2018-01-10 Wed>  [[file:2018-01-20-safe-printf/index.org][A safer printf with variadic templates]]
   :PROPERTIES:
-  :ID:       D61EF2E8-B585-4811-AD36-4083EBD3E6FE
-  :PUBDATE:  <2020-04-18 Sat 17:19>
+  :ID:       B8A679A0-614F-4A26-9C7F-398372F465FF
+  :PUBDATE:  <2020-04-20 Mon 12:42>
   :END:
 * * <2017-12-26 Tue>  [[file:2017-12-26-variadic-templates/index.org][Introduction to Variadic templates]]
   :PROPERTIES:
-  :ID:       15275522-F484-4734-B71C-A4947D4683E5
-  :PUBDATE:  <2020-04-18 Sat 17:19>
+  :ID:       D8F7A481-C2BD-49D5-AC6B-A01FA6076FBC
+  :PUBDATE:  <2020-04-20 Mon 12:42>
   :END:
