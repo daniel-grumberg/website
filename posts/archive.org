@@ -1,9 +1,6 @@
 #+TITLE: Blog
 
-* Archive
-- <2018-07-01 Sun>  [[file:2018-07-01-leveraging-variadics/index.org][Leveraging algebraic types in C++]]
-- <2018-01-10 Wed>  [[file:2018-01-20-safe-printf/index.org][A safer printf with variadic templates]]
-- <2017-12-26 Tue>  [[file:2017-12-26-variadic-templates/index.org][Introduction to Variadic templates]]
-#+BEGIN_EXPORT html
-<a href='../rss.xml'><i class='fa fa-rss'></i></a>
-#+END_EXPORT
+* Archive @@html:<a href='../rss.xml'><i class='fas fa-rss-square'></i></a>@@
+- [[file:2018-07-01-leveraging-variadics/index.org][Leveraging algebraic types in C++]] <2018-07-01 Sun>
+- [[file:2018-01-20-safe-printf/index.org][A safer printf with variadic templates]] <2018-01-10 Wed>
+- [[file:2017-12-26-variadic-templates/index.org][Introduction to Variadic templates]] <2017-12-26 Tue>

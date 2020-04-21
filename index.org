@@ -2,6 +2,7 @@
 
 I am PhD candidate at Imperial College London in the [[https://srg.doc.ic.ac.uk][Software Reliability Group]], working on dynamic analysis technqiues to automatically find bugs in applications.
 More broadly I am interested in compilers, operating systems, systems programming in general and computer architecture.
+You can find my resume [[file:assets/cv.pdf][here]].
 
 I plan to maitain here a bunch of interesting articles about programming topics that I find interesting/relevant to my day-to-day activities.
 I don't guarantee that anything here works or is factually correct, but do shoot me an email if you find something wrong.
@@ -13,8 +14,3 @@ You can find the source that I use to generate this webpage using Emacs [[https:
 #+INCLUDE: posts/posts.org
 
 You can find the full list at [[file:posts/archive.org][my blog]].
-
-* Contacts
-- [[mailto:dany.grumberg@gmail.com][Email]]
-- [[https://github.com/daniel-grumberg][Github]]
-- [[https://twitter.com/danygrumberg][Twitter]]

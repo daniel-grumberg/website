@@ -1,279 +1,66 @@
-@import url('https://fonts.googleapis.com/css?family=IBM+Plex+Mono|Oswald:300|Playfair+Display&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=Oswald:wght@200;300;400;500;600;700&display=swap');
 
-html { font-size: 1.25em;
-       font-family: 'Playfair Display', serif;
-       text-rendering: optimizeLegibility;
+html {
+    margin: 15px;
+    background-color: #fefefa;
+    display: block;
+    text-align: justify;
+    font-size: 1.25rem;
+    font-family: 'Old Standard TT', serif;
+    text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3 {
+    font-family: 'Oswald', sans-serif;
+    font-weight: normal;
+}
+
+header h1 {
+    text-decoration: underline;
+}
+
+header .subtitle {
+    opacity: .8;
+}
+
+a {
+    color: inherit;
+    background-color: inherit;
+    text-decoration: underline;
+}
+
+a:hover {
+    text-shadow: -.25px -.25px 0 black,
+                 .25px .25px black;
 }
 
 body {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    background-color: #fffff8;
-    color: #111;
-    margin-top: 0;
-    margin-bottom: 0;
+    margin: 0 auto;
+    max-width: 800px;
 }
 
-body main {
-    flex: 1 0 auto;
-}
-body header,
-body footer {
-  flex: none;
-}
-
-@media screen and (min-width: 800px) {
-    body #content,
-    body main,
-    body header,
-    body footer {
-        margin: 0 auto;
-        max-width: 800px;
-        width: 800px;
-    }
-    body header {
-        margin-top: 4rem;
-    }
-
-}
-
-body a {
-    text-decoration: none;
-    color: inherit;
-}
-
-body h1 a,
-body .title a,
-body .subtitle a,
-body h2 a,
-body h3 a,
-body h4 a,
 body nav a {
-    background: none;
-}
-
-body .title,
-body .subtitle,
-body h2,
-body h3,
-body h4,
-body nav {
-    font-family: 'Oswald', sans-serif;
-    text-transform: uppercase;
-    margin: 0;
-    padding: 0;
-    hyphens: none;
-}
-
-body h2 {
-    margin-top: 1.5em;
-    font-size: 1.25em;
-}
-
-body h3 {
-    font-size: 1.15em;
-    margin-top: 1.2em;
-}
-
-body h2,
-body h3,
-body h4 {
-    line-height: 1.2em;
-}
-
-body h1 b,
-body h2 b,
-body h3 b,
-body h4 b {
-    font-weight: inherit;
-}
-
-@media screen and (min-width: 800px) {
-    body h1 b,
-    body h2 b,
-    body h3 b,
-    body h4 b {
-        display: block;
-        font-size: 1.38em;
-        font-weight: initial;
-    }
-
-    body header .title b {
-        margin-top:-.35em;
-    }
-
-}
-
-.status {
-    border-bottom: none;
-}
-
-body header {
-    padding-bottom: 1ex;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    border-bottom: .5ex solid black;
-}
-
-body header .title,
-body header .subtitle {
-    padding: 0;
-    margin: 0;
-    text-align: center;
-}
-
-body header .title {
-    font-size: 1.5rem;
-}
-
-
-body header .subtitle,
-body nav {
-    margin-top: 1em;
-    font-size: 1rem;
-}
-
-
-body nav > a {
     margin-right: 2rem;
 }
 
-
-@media screen and (min-width: 800px) {
-    body header {
-        flex-direction: row;
-        align-items: flex-start;
-        align-content: flex-start;
-        justify-content: space-between;
-    }
-
-    body header .subtitle,
-    body header nav {
-        margin: 0;
-        font-size: 1.15rem
-    }
-
-    body header .title,
-    body header .subtitle {
-        text-align: left;
-        margin: 0;
-    }
-
-    body header .title {
-        font-size: 1.75rem;
-    }
+body nav {
+    font-family: 'Oswald', sans-serif;
+    margin-top: 2rem;
+    margin-bottom: 2rem;
 }
 
-body .abstract {
-    font-style: italic;
+body nav #contact {
+    float: right;
 }
 
-body .keywords {
-    font-size: .95rem;
-    text-align: left;
-}
-
-body .keywords p {
-    text-align: left;
-}
-
-
-body .abstract,
-body .keywords {
-    margin: 1rem 1rem;
-}
-
-@media print, (min-width: 800px){
-    body .keywords,
-    body .abstract {
-        margin: 1em 2em;
-    }
-}
-
-
-body p {
-    text-align: justify;
-    hyphens: auto;
-    line-height: 1.5rem;
-}
-
-body main img {
-    display: block;
-    margin: 0 auto;
-    border-radius: .3em;
-    border: 1px solid black;
-    max-width: 100%;
-}
-
-body a[href^="#coderef"],
-body code {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: .85rem;
-}
-
-body pre {
-    white-space: pre-wrap;
-}
-
-body .src {
-    font-family: 'IBM Plex Mono', monospace;
-    border-radius: .3em;
-    border: 1px solid black;
-    padding: .8em 1.2em .4em;
-    font-size: .75rem;
-}
-
-body .org-builtin {
-    /* font-lock-builtin-face */
-    color: #424242;
-    font-weight: bold;
-}
-
-body .org-comment {
-    /* font-lock-comment-face */
-    color: #40883f;
-}
-
-body .org-comment-delimiter {
-    /* font-lock-comment-delimiter-face */
-    color: #40883f;
-}
-
-body .org-constant {
-    /* font-lock-constant-face */
-    color: #989848;
-    font-weight: bold;
-}
-
-body .org-doc {
-    /* font-lock-doc-face */
-    color: #40883f;
-}
-
-body .org-keyword {
-    /* font-lock-keyword-face */
-    color: #989848;
-}
-
-body .org-string {
-    /* font-lock-string-face */
-    color: #b85c57;
-}
-
-body .org-variable-name {
-    /* font-lock-variable-name-face */
-    color: #4fa8a8;
+body nav #contact > a {
+    margin-right: 0;
+    margin-left: 1rem;
 }
 
 body footer {
-    margin-top:2rem;
-    font-size: .75rem;
-    color: #888888;
-}
-
-body footer a {
+    margin-top: 2rem;
+    font-size: 0.75rem;
     color: #888888;
 }
 
@@ -281,147 +68,42 @@ body footer p {
     text-align: center;
 }
 
-@media screen and (min-width: 800px) {
-    body footer {
-        margin-top: 2em;
-    }
+body a[href^="#coderef"],
+body code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .8rem;
 }
 
-body .small-caps {
-    font-feature-settings: "smcp";
+body .org-src-container {
+    background-color: #fffff8;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .8rem;
+    border-radius: .2em;
+    border: 1px solid black;
+    padding: .4em 1.2em .4em;
 }
 
-body ul {
-    list-style-type: square;
+body .org-src-container pre {
+    padding: 0 0 0 0;
+    white-space: pre-wrap;
 }
 
-body li {
-    margin-bottom: 1em;
-}
-
-body dl {
-    width:100%;
-    overflow: hidden;           /*I don't understand how there can even be overflow...*/
-}
-
-body dl dt,
-body dl dd {
-    float:left;}
-
-body dl dd {padding-bottom: .5em;
-            margin-left:1em;}
-body dl dt {width:100%; }
-
-
-@media print, (min-width: 800px) {
-    body dl dt {
-        width:17%;
-    }
-    body dl dd {
-        width:83%;
-        margin-left:0;
-    }
-}
-
-body dd ul {margin: .5ex;}
-
-/* Tables */
-table {
-    margin: 1em auto;
-    width: 100%;
-    border: 2px solid;
-    border-collapse: collapse;
-}
-
-thead {
-    font-family: 'Oswald', sans-serif;
-    border-bottom: 2px solid;
-}
-
-table td + td, table th + th {
-    border-left: 1px solid gray;
-}
-
-table tr {
-    border-top: 1px solid lightgray;
-}
-
-td,th {
-    padding: 0.3em 0.6em;
-    vertical-align: middle;
-}
-
-caption.t-above {
-    caption-side: top;
-}
-
-caption.t-bottom {
-    caption-side: bottom;
-}
-
-caption {
-    margin-bottom: 0.3em;
-}
-
-figcaption {
-    margin-top: 0.3em;
-}
-
-th.org-right {
-    text-align: center;
-}
-
-th.org-left {
-    text-align: center;
-}
-
-th.org-center {
-    text-align: center;
-}
-
-td.org-right {
-    text-align: right;
-}
-
-td.org-left {
-    text-align: left;
-}
-
-td.org-center {
-    text-align: center;
-}
-
-/* clean up when printing */
 @media print {
     html {
-        font-size: 1em;
+        background-color: #ffffff;
+        font-size: 1rem;
+        padding: 10mm 15mm 10mm 15mm;
     }
+
+    body footer,
     body nav {
-        display:none
-    }
-    body header,
-    body h2,
-    body h3 {
-        font-size: 110%;
-        border-bottom: none;
-    }
-    body abbr {
-        text-decoration: none;
-    }
-    body header .subtitle {
-        margin-top: 0em;
-    }
-    body abbr {border-bottom-width: 0;}
-    main {
-        position:absolute;
-    }
-    div[class="outline-3"]{
-        page-break-before: auto;
-        page-break-after: auto;
-        page-break-inside: avoid;
-    }
-    /* the footer doesn't place right in Fx */
-    footer {
         display: none;
+    }
+
+    body .org-src-container {
+        background-color: #ffffff;
+        page-break-inside: avoid;
+        -webkit-print-color-adjust: exact; /* Ensure that keyword colors get printed correctly */
+        color-adjust: exact; /* Ditto for firefox */
     }
 }

@@ -104,7 +104,9 @@
   "wraps org-html-publish-to-html and inserts date as subtitle"
   (let ((project (cons 'blog plist)))
     (plist-put plist :subtitle
-               (format-time-string "%b. %d %Y" (org-publish-find-date filename project)))
+               (format "%s by %s"
+                       (format-time-string "%b. %d %Y" (org-publish-find-date filename project))
+                       (dang/post-get-metadata-from-frontmatter filename "AUTHOR")))
     (dang/org-html-publish-to-html plist filename pub-dir)))
 
 (defun dang/org-html-publish-site-to-html (plist filename pub-dir)
@@ -129,12 +131,11 @@
 (defun dang/org-publish-sitemap-archive (title sitemap)
  "archive.org page (Blog full post list). Wrapper to skip TITLE and just use LIST (https://orgmode.org/manual/Sitemap.html)."
  (let* ((title "Blog")
-        (subtitle "Archive")
+        (subtitle "Archive @@html:<a href='../rss.xml'><i class='fas fa-rss-square'></i></a>@@")
         (posts (cdr sitemap))
         (posts (dang/org-publish-sitemap--valid-entries posts)))
     (concat (format "#+TITLE: %s\n\n* %s\n" title subtitle)
-            (org-list-to-org (cons (car sitemap) posts))
-            "\n#+BEGIN_EXPORT html\n<a href='../rss.xml'><i class='fa fa-rss'></i></a>\n#+END_EXPORT\n")))
+            (org-list-to-org (cons (car sitemap) posts)))))
 
 (defun dang/org-publish-sitemap-entry (entry style project)
   "archive.org and posts.org (latest) entry formatting. Format sitemap ENTRY for PROJECT with the post date before the link, to generate a posts list.  STYLE is not used."
@@ -142,10 +143,10 @@
          (filename (expand-file-name entry base-directory))
          (draft? (dang/post-get-metadata-from-frontmatter filename "DRAFT")))
     (unless (or (equal entry "404.org") draft?)
-      (format "%s [[file:%s][%s]]"
-              (format-time-string "<%Y-%m-%d>" (org-publish-find-date entry project))
+      (format "[[file:%s][%s]] %s"
               entry
-              (org-publish-find-title entry project)))))
+              (org-publish-find-title entry project)
+              (format-time-string "<%Y-%m-%d>" (org-publish-find-date entry project))))))
 
 (defun dang/org-publish-rss (title sitemap)
   "Publish rss.org which needs each entry as a headline."
@@ -224,7 +225,6 @@
 
         (list "rss"
               :base-directory "./posts"
-              :recursive nil
               :exclude "."
               :include '("rss.org")
               :base-extension "org"
@@ -253,7 +253,7 @@
               :exclude (regexp-opt '("public"))
               :include '("CNAME" "LICENSE" ".nojekyll")
               :recursive t
-              :base-extension (regexp-opt '("jpg" "gif" "png" "js" "svg" "css"))
+              :base-extension (regexp-opt '("jpg" "gif" "png" "js" "svg" "css" "pdf"))
               :publishing-directory "./public"
               :publishing-function 'org-publish-attachment)))
 
