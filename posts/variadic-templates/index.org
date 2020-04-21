@@ -6,7 +6,6 @@ This posts serves mostly as quick introduction to the syntax of variadic templat
 I will be shortly building upon this post to show you guys how to leverage this addition to the C++ meta-programming facilities to improve type-safety of your code.
 I will also show you then how to use some the flagship new types in modern C++ that rely upon this facility [[http://en.cppreference.com/w/cpp/utility/tuple][~std::tuple~]] and [[http://en.cppreference.com/w/cpp/utility/variant/variant)][~std::variant~]].
 
-
 * Motivation
 
 Variadic templates have been introduced to the language for roughly three reasons:

@@ -37,6 +37,8 @@
 (require 'ox-rss)
 (require 'ox-publish)
 
+(defconst dang/website-url "https://www.dangrumberg.com")
+
 (defun dang/pre-postamble-format (name)
   "Formats the pre/postamble named NAME by reading a file from the snippets directory."
   `(("en" ,(with-temp-buffer
@@ -103,6 +105,12 @@
                                       "html"))
                       plist pub-dir))
 
+(defun dang/org-rss-publish-to-rss (plist filename pub-dir)
+  "Publish RSS with PLIST, only when FILENAME is 'rss.org'.
+PUB-DIR is when the output will be placed."
+  (if (equal "rss.org" (file-name-nondirectory filename))
+      (org-rss-publish-to-rss plist filename pub-dir)))
+
 (defun dang/org-html-publish-post-to-html (plist filename pub-dir)
   "wraps org-html-publish-to-html and inserts date as subtitle"
   (let ((project (cons 'blog plist)))
@@ -151,24 +159,36 @@
               (org-publish-find-title entry project)
               (format-time-string "<%Y-%m-%d>" (org-publish-find-date entry project))))))
 
-(defun dang/org-publish-rss (title sitemap)
-  "Publish rss.org which needs each entry as a headline."
-  (let* ((title "Blog") (subtitle "Archive")
-         (posts (cdr sitemap))
-         (posts (dang/org-publish-sitemap--valid-entries posts)))
-    (concat (format "#+TITLE: %s\n\n" title)
-            (org-list-to-subtree posts))))
+(defun dang/format-rss-feed-entry (entry style project)
+  "Format ENTRY for the RSS feed.
+ENTRY is a file name.  STYLE is either 'list' or 'tree'.
+PROJECT is the current project."
+  (cond ((not (directory-name-p entry))
+         (let* ((base-directory (plist-get (cdr project) :base-directory))
+                (filename (expand-file-name entry base-directory))
+                (title (org-publish-find-title entry project))
+                (date (format-time-string "%Y-%m-%d" (org-publish-find-date entry project)))
+                (link (concat (file-name-sans-extension entry) ".html")))
+           (with-temp-buffer
+             (insert (concat "* " title "\n"))
+             (org-set-property "RSS_PERMALINK" link)
+             (org-set-property "PUBDATE" date)
+             (insert-file-contents filename)
+             (forward-line 15)
+             (delete-region (point) (point-max))
+             (forward-line -1)
+             (end-of-line)
+             (insert "..")
+             (buffer-string))))
+        ((eq style 'tree)
+         ;; Return only last subdir.
+         (file-name-nondirectory (directory-file-name entry)))
+        (t entry)))
 
-(defun dang/org-publish-rss-entry (entry style project)
-  "Format ENTRY for rss.org for exclusive use of exporting to RSS/XML. Each entry needs to be a headline. STYLE is not used."
-  (let* ((base-directory (plist-get (cdr project) :base-directory))
-         (filename (expand-file-name entry (expand-file-name base-directory (plist-get project :base-directory))))
-         (draft? (dang/post-get-metadata-from-frontmatter filename "DRAFT")))
-    (unless (or (equal entry "404.org") draft?)
-      (format "* %s [[file:%s][%s]]"
-              (format-time-string "<%Y-%m-%d>" (org-publish-find-date entry project))
-              entry
-              (org-publish-find-title entry project)))))
+(defun dang/format-rss-feed (title list)
+  "Generate RSS feed, as a string. TITLE is the title of the RSS feed.  LIST is an internal representation for the files to include, as returned by `org-list-to-lisp'.  PROJECT is the current project."
+  (concat "#+TITLE: " title "\n\n"
+          (org-list-to-generic list '(:istart ""))))
 
 ; Project definition
 (defvar dang--publish-project-alist
@@ -203,7 +223,7 @@
               :base-extension "org"
               :publishing-directory "./public"
               :publishing-function 'ignore
-              :html-link-home "https://www.dangrumberg.com"
+              :html-link-home dang/website-url
               :html-link-use-abs-url t
               :auto-sitemap t
               :sitemap-style 'list
@@ -212,29 +232,24 @@
               :sitemap-function 'dang/org-publish-sitemap-archive
               :sitemap-format-entry 'dang/org-publish-sitemap-entry)
 
-        (list "archive-for-rss"
+        (list "blog-rss"
               :base-directory "./posts"
+              :base-extension "org"
               :recursive t
-              :exclude (regexp-opt '("posts.org" "archive.org" "rss.org"))
-              :base-extension "org"
+              :exclude (regexp-opt '("rss.org" "posts.org" "archive.org"))
+              :publishing-function 'dang/org-rss-publish-to-rss
               :publishing-directory "./public"
-              :publishing-function 'ignore
+              :rss-extension "xml"
+              :html-link-home dang/website-url
+              :html-link-use-abs-url t
+              :html-link-org-files-as-html t
               :auto-sitemap t
-              :sitemap-style 'list
               :sitemap-filename "rss.org"
+              :sitemap-title "Daniel Grumberg"
+              :sitemap-style 'list
               :sitemap-sort-files 'anti-chronologically
-              :sitemap-function 'dang/org-publish-rss
-              :sitemap-format-entry 'dang/org-publish-rss-entry)
-
-        (list "rss"
-              :base-directory "./posts"
-              :exclude "."
-              :include '("rss.org")
-              :base-extension "org"
-              :publishing-directory "./public"
-              :publishing-function 'org-rss-publish-to-rss
-              :html-link-home "https://www.dangrumberg.com"
-              :html-link-use-abs-url t)
+              :sitemap-function 'dang/format-rss-feed
+              :sitemap-format-entry 'dang/format-rss-feed-entry)
 
         (list "site"
               :base-directory "./"

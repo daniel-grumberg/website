@@ -1,12 +1,68 @@
-#+TITLE: Blog
+#+TITLE: Daniel Grumberg
 
-* * <2018-01-10 Wed>  [[file:2018-01-20-safe-printf/index.org][A safer printf with variadic templates]]
-  :PROPERTIES:
-  :ID:       1BA28EB1-B9B7-4A42-B334-83C2D1BE4147
-  :PUBDATE:  <2020-04-21 Tue 18:12>
-  :END:
-* * <2017-12-26 Tue>  [[file:2017-12-26-variadic-templates/index.org][Introduction to Variadic templates]]
-  :PROPERTIES:
-  :ID:       05D4F8DF-284A-4A1D-80B2-071E6DC27A4A
-  :PUBDATE:  <2020-04-21 Tue 18:12>
-  :END:
+* Leveraging algebraic types in C++
+:PROPERTIES:
+:RSS_PERMALINK: leveraging-variadics/index.html
+:PUBDATE:  2018-07-01
+:ID:       D137ADB3-435D-467C-ABDD-C363F5807A6E
+:END:
+Introduction
+
+Today, we will be looking at the new flagship variadic types that are offered in modern C++ [[http://en.cppreference.com/w/cpp/utility/tuple][~std::tuple~]] and [[http://en.cppreference.com/w/cpp/utility/variant/variant][~std::variant~]].
+This post is not meant to teach you how to implement your own variadic templates, if you are into that check out my [[file: ../variadic-templates/index.org][previous post]].
+Instead, I focus on demonstrating the usage of the standard library's own variadic types, so don't sweat it if you are not a template meta-programming expert.
+
+One of the main reasons variadic templates were introduced to the language in the C++11 standard was to enable the definitions of the product and sum types.
+People refer to these as algebraic types due to the connection to algebra and set theory, but don't let that scare you away.
+These are namely, ~std::tuple~ (introduced in C++11) and ~std::variant~ (introduced C++17) in that order.
+
+Tuples are what you would expect if you have encountered them in other languages...
+* A safer printf with variadic templates
+:PROPERTIES:
+:RSS_PERMALINK: safe-printf/index.html
+:PUBDATE:  2018-01-10
+:ID:       BAEE878E-016F-4467-B029-675D2543B828
+:END:
+Introduction
+
+How many of you use the ~printf~ family of functions? Quite a lot, I assume.
+The functions come with some advantages over the standard output streams (~cout~, ~cerr~, etc): - They are plain C and write directly to the underlying POSIX file descriptor, they are thus thread-safe.
+They are somewhat faster as they don't rely on operator overloading and thus dynamic dispatch through virtual function tables.
+This StackOverflow [[https://stackoverflow.com/questions/17671772/c11-variadic-printf-performance][post]] should give you some numbers if you care.
+Most people probably don't/shouldn't care about this.
+They are ubiquitous, well-known, and specifying precision and width is arguably simpler than it is in the stream idiom.
+
+However, ~printf~ and all its friends suffer from one big drawback, type safety, which keeps bringing people back to streams.
+Have you ever provided ~printf~ or worse ~scanf~ the wrong format string for what you were trying to achieve? I know I have.....
+* Introduction to Variadic templates
+:PROPERTIES:
+:RSS_PERMALINK: 2017-12-26-variadic-templates/index.html
+:PUBDATE:  2017-12-26
+:ID:       71E6A687-9109-4870-A10D-C0DA0C23532C
+:END:
+This posts serves mostly as quick introduction to the syntax of variadic templates.
+I will be shortly building upon this post to show you guys how to leverage this addition to the C++ meta-programming facilities to improve type-safety of your code.
+I will also show you then how to use some the flagship new types in modern C++ that rely upon this facility [[http://en.cppreference.com/w/cpp/utility/tuple][~std::tuple~]] and [[http://en.cppreference.com/w/cpp/utility/variant/variant)][~std::variant~]].
+
+Motivation
+
+Variadic templates have been introduced to the language for roughly three reasons:
+
+Define type-safe variadic functions. All of us have messed up using ~scanf~ at some point, and those of us who have ever written C99 or C++03 style variadic functions will know the pain that comes with automatic variadic argument promotions and the ~va_arg~ family of macros. Writing variadic macros is even more painful...
+Define algebraic types without having to jump through too many hoops, that is ~std::tuple~ and ~std::variant~...
+* Introduction to Variadic templates
+:PROPERTIES:
+:RSS_PERMALINK: variadic-templates/index.html
+:PUBDATE:  2017-12-26
+:ID:       5D867360-B99B-469A-B92B-86E541CE98A4
+:END:
+This posts serves mostly as quick introduction to the syntax of variadic templates.
+I will be shortly building upon this post to show you guys how to leverage this addition to the C++ meta-programming facilities to improve type-safety of your code.
+I will also show you then how to use some the flagship new types in modern C++ that rely upon this facility [[http://en.cppreference.com/w/cpp/utility/tuple][~std::tuple~]] and [[http://en.cppreference.com/w/cpp/utility/variant/variant)][~std::variant~]].
+
+Motivation
+
+Variadic templates have been introduced to the language for roughly three reasons:
+
+Define type-safe variadic functions. All of us have messed up using ~scanf~ at some point, and those of us who have ever written C99 or C++03 style variadic functions will know the pain that comes with automatic variadic argument promotions and the ~va_arg~ family of macros. Writing variadic macros is even more painful...
+Define algebraic types without having to jump through too many hoops, that is ~std::tuple~ and ~std::variant~...
