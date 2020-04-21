@@ -45,13 +45,16 @@
 
 (defun dang/head-common-list (plist)
   "List of elements going in head for all pages.  Takes PLIST as context."
-  (let ((description "Daniel Grumberg's website"))
+  (let ((description "The personal website and blog of Daniel Grumberg"))
     (list
      "<script src=\"https://kit.fontawesome.com/9c9a6c64c4.js\" crossorigin=\"anonymous\"></script>"
-     '("meta"   . (("description" . description)))
+     `("meta"   . (("description" . ,description)))
+     '("link"   . (("rel" . "apple-touch-icon") ("sizes" . "180x180") ("href" . "/assets/apple-touch-icon.png")))
+     '("link"   . (("rel" . "icon") ("type" . "image/png") ("sizes" . "32x32") ("href" . "/assets/favicon-32x32.png")))
+     '("link"   . (("rel" . "icon") ("type" . "image/png") ("sizes" . "16x16") ("href" . "/assets/favicon-16x16.png")))
      '("link"   . (("rel" . "stylesheet") ("href" . "/css/code.css") ("type" . "text/css")))
      '("link"   . (("rel" . "stylesheet") ("href" . "/css/site.css") ("type" . "text/css")))
-     '("link"   . (("rel" . "alternate") ("type" . "application+rss/xml") ("title" . description) ("href" . "/rss.xml"))))))
+     `("link"   . (("rel" . "alternate") ("type" . "application+rss/xml") ("title" . ,description) ("href" . "/rss.xml"))))))
 
 (defun dang/post-get-metadata-from-frontmatter (filename key)
   "Extract the KEY as`#+KEY:` from FILENAME."

@@ -1,5 +1,5 @@
 #+TITLE: A safer printf with variadic templates
-#+AUTHOR: Daniel GRumberg
+#+AUTHOR: Daniel Grumberg
 #+DATE: <2018-01-10 Wed>
 
 * Introduction

@@ -39,42 +39,42 @@ body {
     max-width: 800px;
 }
 
-body nav a {
+nav a {
     margin-right: 2rem;
 }
 
-body nav {
+nav {
     font-family: 'Oswald', sans-serif;
     margin-top: 2rem;
     margin-bottom: 2rem;
 }
 
-body nav #contact {
+nav #contact {
     float: right;
 }
 
-body nav #contact > a {
+nav #contact > a {
     margin-right: 0;
     margin-left: 1rem;
 }
 
-body footer {
+footer {
     margin-top: 2rem;
     font-size: 0.75rem;
     color: #888888;
 }
 
-body footer p {
+footer p {
     text-align: center;
 }
 
-body a[href^="#coderef"],
-body code {
+a[href^="#coderef"],
+code {
     font-family: 'IBM Plex Mono', monospace;
     font-size: .8rem;
 }
 
-body .org-src-container {
+.org-src-container {
     background-color: #fffff8;
     font-family: 'IBM Plex Mono', monospace;
     font-size: .8rem;
@@ -83,9 +83,31 @@ body .org-src-container {
     padding: .4em 1.2em .4em;
 }
 
-body .org-src-container pre {
+.org-src-container pre {
     padding: 0 0 0 0;
     white-space: pre-wrap;
+}
+
+table {
+    margin: 1em auto;
+    border: 2px solid black;
+    border-collapse: collapse;
+}
+
+table thead {
+    border-bottom: 2px solid;
+}
+
+
+table th {
+    font-weight: bold;
+}
+
+table th,
+table td {
+    padding: .3em .6em;
+    border: 1px solid #d3d3d3;
+    vertical-align: middle;
 }
 
 @media print {
