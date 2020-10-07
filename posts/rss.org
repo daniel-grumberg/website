@@ -4,7 +4,7 @@
 :PROPERTIES:
 :RSS_PERMALINK: leveraging-variadics/index.html
 :PUBDATE:  2018-07-01
-:ID:       D137ADB3-435D-467C-ABDD-C363F5807A6E
+:ID:       5583b363-7af7-4eb8-95d6-7a2b02f922db
 :END:
 Introduction
 
@@ -21,7 +21,7 @@ Tuples are what you would expect if you have encountered them in other languages
 :PROPERTIES:
 :RSS_PERMALINK: safe-printf/index.html
 :PUBDATE:  2018-01-10
-:ID:       BAEE878E-016F-4467-B029-675D2543B828
+:ID:       77206187-257d-4c03-b607-5ab0c3f54397
 :END:
 Introduction
 
@@ -36,25 +36,9 @@ However, ~printf~ and all its friends suffer from one big drawback, type safety,
 Have you ever provided ~printf~ or worse ~scanf~ the wrong format string for what you were trying to achieve? I know I have.....
 * Introduction to Variadic templates
 :PROPERTIES:
-:RSS_PERMALINK: 2017-12-26-variadic-templates/index.html
-:PUBDATE:  2017-12-26
-:ID:       71E6A687-9109-4870-A10D-C0DA0C23532C
-:END:
-This posts serves mostly as quick introduction to the syntax of variadic templates.
-I will be shortly building upon this post to show you guys how to leverage this addition to the C++ meta-programming facilities to improve type-safety of your code.
-I will also show you then how to use some the flagship new types in modern C++ that rely upon this facility [[http://en.cppreference.com/w/cpp/utility/tuple][~std::tuple~]] and [[http://en.cppreference.com/w/cpp/utility/variant/variant)][~std::variant~]].
-
-Motivation
-
-Variadic templates have been introduced to the language for roughly three reasons:
-
-Define type-safe variadic functions. All of us have messed up using ~scanf~ at some point, and those of us who have ever written C99 or C++03 style variadic functions will know the pain that comes with automatic variadic argument promotions and the ~va_arg~ family of macros. Writing variadic macros is even more painful...
-Define algebraic types without having to jump through too many hoops, that is ~std::tuple~ and ~std::variant~...
-* Introduction to Variadic templates
-:PROPERTIES:
 :RSS_PERMALINK: variadic-templates/index.html
 :PUBDATE:  2017-12-26
-:ID:       5D867360-B99B-469A-B92B-86E541CE98A4
+:ID:       2034cdb4-3516-407a-a9b6-39fb27e60094
 :END:
 This posts serves mostly as quick introduction to the syntax of variadic templates.
 I will be shortly building upon this post to show you guys how to leverage this addition to the C++ meta-programming facilities to improve type-safety of your code.
