@@ -4,7 +4,7 @@
 :PROPERTIES:
 :RSS_PERMALINK: leveraging-variadics/index.html
 :PUBDATE:  2018-07-01
-:ID:       5583b363-7af7-4eb8-95d6-7a2b02f922db
+:ID:       3f713cbd-8e5a-4102-9507-4f5a5619f218
 :END:
 Introduction
 
@@ -21,7 +21,7 @@ Tuples are what you would expect if you have encountered them in other languages
 :PROPERTIES:
 :RSS_PERMALINK: safe-printf/index.html
 :PUBDATE:  2018-01-10
-:ID:       77206187-257d-4c03-b607-5ab0c3f54397
+:ID:       b1da558e-fcee-4f42-af23-512d639812b5
 :END:
 Introduction
 
@@ -38,7 +38,7 @@ Have you ever provided ~printf~ or worse ~scanf~ the wrong format string for wha
 :PROPERTIES:
 :RSS_PERMALINK: variadic-templates/index.html
 :PUBDATE:  2017-12-26
-:ID:       2034cdb4-3516-407a-a9b6-39fb27e60094
+:ID:       3ecd11b6-d8ae-493a-9e27-c4201b6ebd1d
 :END:
 This posts serves mostly as quick introduction to the syntax of variadic templates.
 I will be shortly building upon this post to show you guys how to leverage this addition to the C++ meta-programming facilities to improve type-safety of your code.
