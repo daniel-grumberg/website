@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- 29 Sep. 2021 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leveraging algebraic types in C++</title>
+<meta name="generator" content="Org mode">
+<meta name="author" content="Daniel Grumberg">
+<script src="https://kit.fontawesome.com/9c9a6c64c4.js" crossorigin="anonymous"></script>
+<meta description='The personal website and blog of Daniel Grumberg'/>
+<link rel='apple-touch-icon' sizes='180x180' href='/assets/apple-touch-icon.png'/>
+<link rel='icon' type='image/png' sizes='32x32' href='/assets/favicon-32x32.png'/>
+<link rel='icon' type='image/png' sizes='16x16' href='/assets/favicon-16x16.png'/>
+<link rel='stylesheet' href='/css/code.css' type='text/css'/>
+<link rel='stylesheet' href='/css/site.css' type='text/css'/>
+<link rel='alternate' type='application+rss/xml' title='The personal website and blog of Daniel Grumberg' href='/rss.xml'/>
+</head>
+<body>
+<header id="preamble" class="status">
+<nav>
+    <a href="/">About</a>
+    <a href="/posts/archive.html">Blog</a>
+  <div id="contact">
+    <a href="/rss.xml"><i class="fas fa-rss-square"></i></a>
+    <a href="/assets/cv.pdf"><i class="fas fa-file"></i></a>
+    <a href="mailto:dany.grumberg@gmail.com"><i class="fas fa-envelope"></i></a>
+    <a href="https://github.com/daniel-grumberg"><i class="fab fa-github-square"></i></a>
+    <a href="https//twitter.com/danygrumberg"><i class="fab fa-twitter-square"></i></a>
+    <a href="https://www.linkedin.com/in/daniel-grumberg/"><i class="fab fa-linkedin"></i></a>
+  </div>
+</nav>
+</header>
+<main id="content">
+<header>
+<h1 class="title">Leveraging algebraic types in C++</h1>
+<p class="subtitle">Jul. 01 2018 by Daniel Grumberg</p>
+</header>
+<section id="outline-container-org974bb2e" class="outline-2">
+<h2 id="org974bb2e">Introduction</h2>
+<div class="outline-text-2" id="text-org974bb2e">
+<p>
+Today, we will be looking at the new flagship variadic types that are offered in modern C++ <a href="http://en.cppreference.com/w/cpp/utility/tuple"><code>std::tuple</code></a> and <a href="http://en.cppreference.com/w/cpp/utility/variant/variant"><code>std::variant</code></a>.
+This post is not meant to teach you how to implement your own variadic templates, if you are into that check out my <a href=" ../variadic-templates/index.html">previous post</a>.
+Instead, I focus on demonstrating the usage of the standard library&rsquo;s own variadic types, so don&rsquo;t sweat it if you are not a template meta-programming expert.
+</p>
+
+<p>
+One of the main reasons variadic templates were introduced to the language in the C++11 standard was to enable the definitions of the product and sum types.
+People refer to these as algebraic types due to the connection to algebra and set theory, but don&rsquo;t let that scare you away.
+These are namely, <code>std::tuple</code> (introduced in C++11) and <code>std::variant</code> (introduced C++17) in that order.
+</p>
+
+<p>
+Tuples are what you would expect if you have encountered them in other languages.
+If you have never seen them before, they represent the Cartesian product of the provided template parameters (think of it as an anonymous struct with anonymous fields).
+Variants aim to implement a better alternative to C-style unions.
+</p>
+
+<p>
+Defining algebraic types was possible before C++11, but was somewhat convoluted and the usage was often unintuitive.
+If you have ever implemented or dealt with typelists you will know what I mean.
+However, we can now make use of the standard library&rsquo;s robust implementation of these ideas to easily improve the safety and readability of our code.
+</p>
+</div>
+</section>
+
+<section id="outline-container-orgd933da8" class="outline-2">
+<h2 id="orgd933da8">Tuples</h2>
+<div class="outline-text-2" id="text-orgd933da8">
+<p>
+As you know, we can not return multiple values from a function in C++.
+To tackle this issue, we often define structs to encapsulate all the values we wish to return.
+When we do this we often define useful abstractions in the problem domain, but there are a lot of cases where this introduces syntactic overhead.
+Tuples are very interesting in this context.
+They allow us to pass/return multiple logically grouped values at once without the burden of defining a type for this purpose.
+Furthermore, they allow us to create compound types programmatically according to user input which can be an incredibly useful facility.
+</p>
+</div>
+
+<div id="outline-container-orgcd7a911" class="outline-3">
+<h3 id="orgcd7a911">API</h3>
+<div class="outline-text-3" id="text-orgcd7a911">
+<p>
+The API is super simple, it provides constructors, destructor, a specialisation of the swap algorithm and comparison operators that operate lexicographically.
+It also provides <code>tuple_cat</code> which concatenates any number of tuples into one big tuple, and <code>forward_as_tuple</code> which takes a bunch of r-value references and forwards them as a tuple of r-value references.
+It also provides the nifty <code>make_tuple</code> which allows us to deduce the type of the tuple we are trying to instantiate, essentially it allows us to write <code>auto t = std::make_tuple(1u, 1.0f, true)</code> where <code>t</code> is deduced to be of type <code>tuple&lt;unsigned, float, bool&gt;</code>.
+</p>
+
+<p>
+The one thing I have not touched upon is how to read individual values out of a tuple.
+There are essentially three ways of doing this:
+</p>
+
+<ul class="org-ul">
+<li><p>
+If you want to read a single value out, your best option is <code>get</code>, which given a zero-based index will return a reference to the value contained in the tuple, the usage is a as follows:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-keyword">auto</span> <span class="org-variable-name">t</span> = <span class="org-constant">std</span>::make_tuple(1u, 1.0f, <span class="org-constant">true</span>);
+<span class="org-keyword">auto</span> <span class="org-variable-name">f</span> = <span class="org-constant">std</span>::get&lt;1&gt;(t); <span class="org-comment-delimiter">// </span><span class="org-comment">f now has value 1.0f</span>
+</pre>
+</div></li>
+
+<li><p>
+If you want to read all the values in a tuple inside local variables, you should use <code>tie</code> instead of getting each value individually:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-keyword">auto</span> <span class="org-variable-name">t</span> = <span class="org-constant">std</span>::make_tuple(1u, 1.0f, <span class="org-constant">true</span>);
+<span class="org-type">unsigned</span> <span class="org-variable-name">u</span>; <span class="org-type">float</span> <span class="org-variable-name">f</span>;
+<span class="org-constant">std</span>::tie(u, f, <span class="org-constant">std</span>::ignore) = t; <span class="org-comment-delimiter">// </span><span class="org-comment">u now contains 1u and f contains 1.0f</span>
+</pre>
+</div></li>
+</ul>
+
+<p>
+It achieves this seemingly magical behaviour by creating and returning a tuple of references to the provided variables.
+The assignment happens simply through the tuple assignment operator between unrelated tuples.
+Here <code>ignore</code> is a special value that acts as a placeholder for values we are not interested in.
+</p>
+
+<ul class="org-ul">
+<li>The only problem with <code>tie</code> is that you have to pre-declare your variables and provide the types yourself.</li>
+</ul>
+<p>
+This can lead to nasty surprises with implicit type conversions.
+If you have a C++17 compliant compiler, you should use the new structured bindings feature instead.
+These are now part of the language syntax so you can not implement them in user code, but the usage it lets type-inference work its magic, which provides the correct type for the variables:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-keyword">auto</span> <span class="org-variable-name">t</span> = <span class="org-constant">std</span>::make_tuple(1u, 1.0f, <span class="org-constant">true</span>);
+<span class="org-keyword">auto</span> [u, f, dummy] = t; <span class="org-comment-delimiter">// </span><span class="org-comment">u now contains 1u and f contains 1.0f and dummy is true</span>
+</pre>
+</div>
+
+<p>
+The only issue with this is that you can not ignore values in the tuple.
+In the above snippet the compiler would complain about <code>dummy</code> not being used in later code unless you supply <code>-Wunused-variable</code> to the compiler which you might not want to do.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org6bd2695" class="outline-3">
+<h3 id="org6bd2695">Automatic memoization</h3>
+<div class="outline-text-3" id="text-org6bd2695">
+<p>
+Automatic memoization is quite a neat example of the increased type safety and convenience we can achieve using tuples.
+Imagine we wanted to write an automatic function memoizer in C++98, a possible implementation could look as follows:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-keyword">template</span> &lt; <span class="org-keyword">class</span> <span class="org-type">Out</span>, <span class="org-keyword">class</span> <span class="org-type">Inputs</span>, <span class="org-keyword">class</span> <span class="org-type">InputsCmp</span> = <span class="org-constant">std</span>::<span class="org-type">less</span>&lt;<span class="org-type">Inputs</span>&gt; &gt;
+<span class="org-keyword">struct</span> <span class="org-type">Memoizer</span>
+{
+<span class="org-keyword">public</span>:
+    <span class="org-keyword">typedef</span> <span class="org-type">Out</span> (*<span class="org-type">fn_type</span>)(<span class="org-type">Inputs</span>);
+    <span class="org-function-name">Memoizer</span>(<span class="org-type">fn_type</span> <span class="org-variable-name">fn</span>) : fn_(fn) { }
+    <span class="org-type">Out</span> <span class="org-keyword">operator</span><span class="org-function-name">()</span>(<span class="org-type">Inputs</span> <span class="org-variable-name">inputs</span>)
+    {
+        <span class="org-keyword">typename</span> <span class="org-constant">Cache</span>::<span class="org-type">iterator</span> <span class="org-variable-name">cache_val</span> = cache_.find(inputs);
+        <span class="org-keyword">if</span> (cache_val == cache_.end())
+        {
+            <span class="org-type">Out</span> <span class="org-variable-name">res</span> = fn_(inputs);
+            cache_[inputs] = res;
+            <span class="org-keyword">return</span> res;
+        }
+        <span class="org-constant">std</span>::cout &lt;&lt; <span class="org-string">"Cache hit"</span> &lt;&lt; <span class="org-constant">std</span>::endl;
+        <span class="org-keyword">return</span> cache_val-&gt;second;
+    }
+
+<span class="org-keyword">private</span>:
+    <span class="org-keyword">typedef</span> <span class="org-constant">std</span>::<span class="org-type">map</span>&lt;<span class="org-type">Inputs</span>, <span class="org-type">Out</span>, <span class="org-type">InputsCmp</span>&gt; <span class="org-type">Cache</span>;
+    <span class="org-type">fn_type</span> <span class="org-variable-name">fn_</span>;
+    <span class="org-type">Cache</span> <span class="org-variable-name">cache_</span>;
+};
+</pre>
+</div>
+
+<p>
+This is how I would go about defining an automatic memoizer in strict C++98.
+The idea here is to define a functor object responsible for maintaining the cache of calls to some function <code>fn</code> that is passed in as a function pointer.
+The trouble here, is that <code>fn</code> can only accept one argument.
+A solution for this to write create wrappers for multi-argument functions that accept their arguments as a single struct.
+We then need to provide either a specialisation of <code>std::less</code> for our input type, or a custom comparator functor.
+The latter is the option I prefer, but I don&rsquo;t have a have a real justification for this.
+This how we can wrap a call to a simple two argument function:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-type">float</span> <span class="org-function-name">simple_func</span>(<span class="org-type">int</span> <span class="org-variable-name">a</span>, <span class="org-type">float</span> <span class="org-variable-name">b</span>);
+
+<span class="org-keyword">struct</span> <span class="org-type">SimpleFuncIn</span>
+{
+    <span class="org-type">int</span> <span class="org-variable-name">a_</span>;
+    <span class="org-type">float</span> <span class="org-variable-name">b_</span>;
+    <span class="org-function-name">SimpleFuncIn</span>(<span class="org-type">int</span> <span class="org-variable-name">a</span>, <span class="org-type">float</span> <span class="org-variable-name">b</span>) : a_(a), b_(b) { }
+};
+
+<span class="org-keyword">struct</span> <span class="org-type">SimpleFuncCmp</span>
+{
+    <span class="org-type">bool</span> <span class="org-keyword">operator</span><span class="org-function-name">()</span>(<span class="org-type">SimpleFuncIn</span> <span class="org-keyword">const</span>&amp; <span class="org-variable-name">lhs</span>, <span class="org-type">SimpleFuncIn</span> <span class="org-keyword">const</span>&amp; <span class="org-variable-name">rhs</span>) <span class="org-keyword">const</span>
+    {
+        <span class="org-keyword">if</span> (lhs.a_ == rhs.a_) <span class="org-keyword">return</span> lhs.b_ &lt; rhs.b_;
+        <span class="org-keyword">return</span> lhs.a_ &lt; rhs.a_;
+    }
+};
+
+<span class="org-keyword">static</span> <span class="org-type">float</span> <span class="org-function-name">simple_func_wrap</span>(<span class="org-type">SimpleFuncIn</span> <span class="org-variable-name">inputs</span>)
+{
+    <span class="org-keyword">return</span> simple_func(inputs.a_, inputs.b_);
+}
+</pre>
+</div>
+
+<p>
+And then somewhere later in the code, we can use our brand-new <code>Memoizer</code> like this:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-type">Memoizer</span>&lt;<span class="org-type">float</span>, SimpleFuncIn, SimpleFuncCmp&gt; <span class="org-variable-name">memoized_func_old</span>(&amp;simple_func_wrap);
+...
+memoized_func_old(SimpleFuncIn(1, 2));
+</pre>
+</div>
+
+<p>
+As a little aside, we can build a nifty little factory function for <code>Memoizer</code> that will deduce the template parameters for us.
+A crude implementation could look like this:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-keyword">template</span> &lt; <span class="org-keyword">class</span> <span class="org-type">Out</span>, <span class="org-keyword">class</span> <span class="org-type">In</span>, <span class="org-keyword">class</span> <span class="org-type">InCmp</span> &gt;
+<span class="org-type">Memoizer</span>&lt;<span class="org-type">Out</span>, <span class="org-type">In</span>, <span class="org-type">InCmp</span>&gt; <span class="org-function-name">build_memo</span>(<span class="org-type">Out</span> (*<span class="org-function-name">fn</span>)(<span class="org-type">In</span>), <span class="org-type">InCmp</span> <span class="org-variable-name">cmp</span> = <span class="org-constant">std</span>::less&lt;<span class="org-type">In</span>&gt;())
+{
+    <span class="org-keyword">return</span> Memoizer&lt;<span class="org-type">Out</span>, <span class="org-type">In</span>, <span class="org-type">InCmp</span>&gt;(fn);
+}
+</pre>
+</div>
+
+<p>
+We see here that there is some syntactic overhead in the usage of our automatic memoizer.
+We can use tuples and variadic templates to represent arbitrary function calls in the same way that uncurrying functions works in functional programming languages.
+These new features as well as lambdas and automatic type inference can really help us in reducing the syntactic overhead of defining and using automatic memoization:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-keyword">template</span> &lt;<span class="org-keyword">typename</span> <span class="org-type">R</span>, <span class="org-keyword">typename</span>... <span class="org-type">Args</span>&gt;
+<span class="org-keyword">decltype</span>(<span class="org-keyword">auto</span>) <span class="org-function-name">memoize</span>(<span class="org-type">R</span> (*<span class="org-function-name">fn</span>)(<span class="org-type">Args</span>...))
+{
+    <span class="org-constant">std</span>::<span class="org-type">map</span>&lt;<span class="org-constant">std</span>::<span class="org-type">tuple</span>&lt;<span class="org-type">Args</span>...&gt;, <span class="org-type">R</span>&gt; <span class="org-variable-name">cache</span>;
+
+    <span class="org-keyword">return</span> [=](<span class="org-type">Args</span>... <span class="org-variable-name">args</span>) <span class="org-keyword">mutable</span> -&gt; R
+    {
+        <span class="org-keyword">auto</span> <span class="org-variable-name">arg_tuple</span> = <span class="org-constant">std</span>::make_tuple(args...);
+        <span class="org-keyword">auto</span> <span class="org-variable-name">cache_val</span> = cache.find(arg_tuple);
+        <span class="org-keyword">if</span> (cache_val == cache.end())
+        {
+            <span class="org-keyword">auto</span> <span class="org-variable-name">res</span> = fn(args...);
+            cache[arg_tuple] = res;
+            <span class="org-keyword">return</span> res;
+        }
+        <span class="org-constant">std</span>::cout &lt;&lt; <span class="org-string">"Cache hit"</span> &lt;&lt; <span class="org-constant">std</span>::endl;
+        <span class="org-keyword">return</span> cache_val-&gt;second;
+    };
+}
+</pre>
+</div>
+
+<p>
+We don&rsquo;t need to define our own memoizer type as we can simply return a lambda that will have the same functionality.
+We use tuples to represent the arguments to the function and variadic templates to allow an arbitrary number them.
+The main logic is largely unchanged a part from the usage of <code>std::make_tuple</code> to &ldquo;uncurry&rdquo; the call and provide a single object for the arguments the same way our wrapper struct worked in the C++98 example.
+</p>
+
+<p>
+The usage is incredibly simple and does not require us to specify a bunch of template parameters or to define custom types and comparators:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-keyword">auto</span> <span class="org-variable-name">memoized_func</span> = memoize(simple_func);
+...
+memoized_func(1, 2);
+</pre>
+</div>
+</div>
+</div>
+</section>
+
+<section id="outline-container-orgcdb3093" class="outline-2">
+<h2 id="orgcdb3093">Variants</h2>
+<div class="outline-text-2" id="text-orgcdb3093">
+</div>
+<div id="outline-container-org97bf9f0" class="outline-3">
+<h3 id="org97bf9f0">API</h3>
+<div class="outline-text-3" id="text-org97bf9f0">
+<p>
+A variant can only contain one of its underlying types, or in case of an error no value (this is quite hard to achieve, as it only happens if an initialization operation on the underlying storage throws an exception).
+However you can easily detect this state by calling <code>valueless_by_exception</code> on the variant instance.
+This is a big step up over the traditional <code>union</code> type as it makes holding non POD (plain old data) types automatic, and it has well defined semantics for errors when constructing those complex types.
+The API for <code>std::variant</code> is very simple, it provides, the usual suspects (constructors, destructor, assignment operator, and swap) and some more peculiar operations:
+</p>
+
+<ul class="org-ul">
+<li><code>emplace</code> allows us to construct values inside the variant, in place.</li>
+<li><code>index</code> gives the zero-based index of the alternative in the variant.</li>
+<li><code>valueless_by_exception</code> checks if the variant is in an error state.</li>
+</ul>
+
+<p>
+You also get a bunch of non-member functions that provide incredibly useful functionality:
+</p>
+
+<ul class="org-ul">
+<li>comparison operators compare variants as their contained values - <code>holds_alternative</code> given a template type, tells us if the variant currently contains it.</li>
+<li><code>get</code> given an index or a type (if it is unique in the alternative list) returns a reference to the value contained by the variant if it matches the given type index otherwise throws an error.</li>
+<li><code>get_if</code> does the same as get but returns a pointer to the value in the variant, otherwise it returns a null pointer.</li>
+<li><code>visit</code> applies the given functor to all the variants provided as arguments, it is only valid if the functor is valid for all alternatives in the variant.</li>
+</ul>
+
+<p>
+You can of course find more about this on <a href="http://en.cppreference.com/w/cpp/utility/variant">cppreference</a>.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgd3a8bbd" class="outline-3">
+<h3 id="orgd3a8bbd">Using Variants to improve type-safety</h3>
+<div class="outline-text-3" id="text-orgd3a8bbd">
+<p>
+An interesting application of variant types is to concisely and elegantly define finite state machines and many associated patterns.
+This allows us to implement the Type State pattern and eliminate an entire class of common bugs.
+I will show an interesting example I extended from Ben Deane&rsquo;s CppCon16 <a href="https://www.youtube.com/watch?v=ojZbFIQSdl8">talk</a>.
+The following snippet is something you might find in any older codebase, that can be improved through the usage of variants:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-keyword">enum</span> <span class="org-keyword">class</span> <span class="org-type">ConnectionState</span>
+{
+    <span class="org-variable-name">DISCONNECTED</span>,
+    <span class="org-variable-name">CONNECTING</span>,
+    <span class="org-variable-name">CONNECTED</span>,
+    <span class="org-variable-name">CONNECTION_INTERRUPTED</span>
+}
+
+<span class="org-keyword">struct</span> <span class="org-type">Connection</span>
+{
+    <span class="org-type">ConnectionState</span> <span class="org-variable-name">m_connectionState</span>;
+
+    <span class="org-comment-delimiter">// </span><span class="org-comment">Notify all the Connection's observers of the interuption</span>
+    <span class="org-type">void</span> <span class="org-function-name">notifyInterrupted</span>();
+
+    <span class="org-constant">std</span>::<span class="org-type">string</span> <span class="org-variable-name">m_serverAddress</span>;
+    <span class="org-type">ConnectionId</span> <span class="org-variable-name">m_id</span>;
+    <span class="org-constant">std</span>::<span class="org-constant">chrono</span>::<span class="org-constant">system_clock</span>::<span class="org-type">time_point</span> <span class="org-variable-name">m_connectedTime</span>;
+    <span class="org-constant">std</span>::<span class="org-constant">chrono</span>::<span class="org-type">milliseconds</span> <span class="org-variable-name">m_lastPingTime</span>;
+    <span class="org-type">Timer</span> <span class="org-variable-name">m_reconnectTimer</span>;
+}
+</pre>
+</div>
+
+<p>
+This looks like it works quite well on the surface, but the important thing to realise here is that certain fields of <code>Connection</code> only make sense in certain connection states.
+For example, <code>m_connectedTime</code> only makes sense in the <code>CONNECTED</code> state, worse even, people often will reuse that field to mean disconnected time in the <code>CONNECTION_INTERRUPTED</code> state only documenting through a comment or not all.
+Similarly <code>m_lastPingTime</code> only makes sense in the <code>CONNECTED</code> state and <code>m_reconnectTimer</code> only has adds value in the <code>CONNECTION_INTERRUPTED</code> state.
+The trouble here is that the programmer has to ensure that all field accesses are predicated by checks to the current connection state and we need discipline to ensure we don&rsquo;t reuse fields in states they weren&rsquo;t meant for.
+Variants are quite useful here as they allow us to tie data to the underlying state.
+A nice reworking of the above code would be:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-keyword">struct</span> <span class="org-type">Connection</span>
+{
+    <span class="org-constant">std</span>::<span class="org-type">string</span> <span class="org-variable-name">m_serverAddress</span>;
+
+    <span class="org-keyword">struct</span> <span class="org-type">Disconnected</span> { };
+    <span class="org-keyword">struct</span> <span class="org-type">Connecting</span> { };
+    <span class="org-keyword">struct</span> <span class="org-type">Connected</span>
+    {
+        <span class="org-constant">std</span>::<span class="org-constant">chrono</span>::<span class="org-constant">system_clock</span>::<span class="org-type">time_point</span> <span class="org-variable-name">m_connectedTime</span>;
+        <span class="org-constant">std</span>::<span class="org-constant">chrono</span>::<span class="org-type">milliseconds</span> <span class="org-variable-name">m_lastPingTime</span>;
+    };
+    <span class="org-keyword">struct</span> <span class="org-type">ConnectionInterrupted</span>
+    {
+        <span class="org-constant">std</span>::<span class="org-constant">chrono</span>::<span class="org-constant">system_clock</span>::<span class="org-type">time_point</span> <span class="org-variable-name">m_disconnectedTime</span>;
+        <span class="org-type">Timer</span> <span class="org-variable-name">m_reconnectTimer</span>;
+    };
+
+    <span class="org-comment-delimiter">// </span><span class="org-comment">Notify all the Connection's observers of the interuption</span>
+    <span class="org-type">void</span> <span class="org-function-name">notifyInterrupted</span>();
+
+    <span class="org-keyword">typedef</span> <span class="org-type">state_t</span> <span class="org-constant">std</span>::<span class="org-type">variant</span>&lt;<span class="org-type">Disconnected</span>,
+        <span class="org-type">Connecting</span>,
+        <span class="org-type">Connected</span>,
+        <span class="org-type">ConnectionInterrupted</span>&gt;;
+
+    <span class="org-type">state_t</span> <span class="org-variable-name">m_connection</span>;
+}
+</pre>
+</div>
+
+<p>
+The advantage of this version is the tighter coupling between the connection state and the relevant data.
+Thus state transition are much cleaner as we can not leave unrelated fields in limbo any more, which is something Ben mentioned in his talk.
+Furthermore, a variant occupies roughly as much space as the largest underlying type, which means that we reduced the memory footprint of the <code>Connection</code> struct.
+</p>
+
+<p>
+In this implementation, a state transition is made by assigning a value to the variant.
+We could represent the disconnection state transition by a simple method in the <code>Connection</code> struct:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-type">void</span> <span class="org-function-name">disconnect</span>() {
+    m_connection = Disconnected();
+}
+</pre>
+</div>
+
+<p>
+This is a very simple scheme, but we can run into issues when the state transition depends on the current state.
+To implement this using simple member functions, we would need to manually check for the current connection and implement messy conditions inside each transition method.
+Instead, we can model this kind of behaviour using the <code>visit</code> API of the variant type.
+We can then create a functor for each event type we want to implement, for example we can implement the <code>InterruptedEvent</code> as follows:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-keyword">struct</span> <span class="org-type">InterruptedEvent</span> {
+    <span class="org-function-name">InterruptedEvent</span>(<span class="org-type">Connection</span>&amp; <span class="org-variable-name">c</span>) : m_c(c) { }
+
+    <span class="org-constant">Connection</span>::<span class="org-type">state_t</span> <span class="org-keyword">operator</span><span class="org-function-name">()</span> (<span class="org-keyword">const</span> <span class="org-constant">Connection</span>::<span class="org-type">Disconnected</span>&amp; <span class="org-variable-name">s</span>) { <span class="org-keyword">return</span> s; }
+    <span class="org-constant">Connection</span>::<span class="org-type">state_t</span> <span class="org-keyword">operator</span><span class="org-function-name">()</span> (<span class="org-keyword">const</span> <span class="org-constant">Connection</span>::<span class="org-type">Connecting</span>&amp; <span class="org-variable-name">s</span>) { <span class="org-keyword">return</span> <span class="org-constant">Connection</span>::Disconnected(); }
+    <span class="org-constant">Connection</span>::<span class="org-type">state_t</span> <span class="org-keyword">operator</span><span class="org-function-name">()</span> (<span class="org-keyword">const</span> <span class="org-constant">Connection</span>::<span class="org-type">Connected</span>&amp; <span class="org-variable-name">s</span>) {
+        <span class="org-keyword">const</span> <span class="org-keyword">auto</span> <span class="org-variable-name">now</span> = <span class="org-constant">std</span>::<span class="org-constant">chrono</span>::<span class="org-constant">system_clock</span>::now();
+        m_c.notifyInterrupted();
+        <span class="org-keyword">return</span> <span class="org-constant">Connection</span>::ConnectionInterrupted{now, 100};
+    }
+    <span class="org-constant">Connection</span>::<span class="org-type">state_t</span> <span class="org-keyword">operator</span><span class="org-function-name">()</span> (<span class="org-keyword">const</span> <span class="org-constant">Connection</span>::<span class="org-type">ConnectionInterrupted</span>&amp; <span class="org-variable-name">s</span>) { <span class="org-keyword">return</span> s; }
+
+<span class="org-keyword">private</span>:
+    <span class="org-type">Connection</span>&amp; <span class="org-variable-name">m_c</span>;
+</pre>
+</div>
+
+<p>
+We can then implement the transition:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-keyword">template</span> &lt;<span class="org-keyword">typename</span> <span class="org-type">T</span>&gt;
+<span class="org-type">void</span> <span class="org-function-name">transition</span>() {
+    m_connection = <span class="org-constant">std</span>::visit(T(*<span class="org-keyword">this</span>), m_connection);
+}
+</pre>
+</div>
+
+<p>
+This requires each T to conform to the requirements of events.
+Let&rsquo;s take <code>InterruptedEvent</code> as an example.
+To make this work, the <code>InterruptedEvent</code> must provide an overload of <code>operator()</code> for each variant alternative.
+We also construct it with a reference to the underlying <code>Connection</code> to enable it to use its API.
+In this pattern it is often desirable to perform state entry actions in the constructors of the variant alternatives.
+</p>
+
+<p>
+An alternative to the visitation scheme is to have all the variant alternatives inherit from a class defining stub for all the FSM transitions.
+We can then implement each transition as members of the <code>Connection</code> class.
+Let&rsquo;s look at the implementation of interruption in this scheme:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-type">void</span> <span class="org-function-name">interrupt</span>() {
+    <span class="org-keyword">const</span> <span class="org-keyword">auto</span> <span class="org-variable-name">ind</span> = m_connection.index();
+    <span class="org-keyword">auto</span> <span class="org-variable-name">curr_state</span> = <span class="org-constant">std</span>::get&lt;ind&gt;(m_connection);
+    curr_state.interrupt();
+}
+</pre>
+</div>
+
+<p>
+I personally prefer the visitor method as it decouples the transitions from the actual connection state.
+It allows us to keep related functionality in the same class.
+Furthermore with C++17 we don&rsquo;t need to define a separate type for the state transition functor.
+We can leverage lambdas and the new <code>if constexpr</code> statements to get the best of both worlds as detailed below:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-type">void</span> <span class="org-function-name">interrupt</span>() {
+    m_connection = <span class="org-constant">std</span>::visit([&amp;](<span class="org-keyword">auto</span>&amp; <span class="org-variable-name">s</span>) {
+        <span class="org-keyword">using</span> <span class="org-type">T</span> = <span class="org-constant">std</span>::<span class="org-type">decay</span>&lt;<span class="org-keyword">decltype</span>(s)&gt;;
+        <span class="org-keyword">if</span> <span class="org-keyword">constexpr</span> (<span class="org-constant">std</span>::is_same_v&lt;T, Connected) {
+            <span class="org-keyword">const</span> <span class="org-keyword">auto</span> <span class="org-variable-name">now</span> = <span class="org-constant">std</span>::<span class="org-constant">chrono</span>::<span class="org-constant">system_clock</span>::now();
+            notifyInterrupted();
+            <span class="org-keyword">return</span> ConnectionInterrupted{ now, 100 };
+        }
+        <span class="org-keyword">else</span> <span class="org-keyword">if</span> <span class="org-keyword">constexpr</span> (<span class="org-constant">std</span>::<span class="org-type">is_same_v</span>&lt;<span class="org-type">T</span>, Connecting&gt;) {
+            <span class="org-keyword">return</span> Disconnected();
+        }
+        <span class="org-keyword">else</span>
+        {
+            <span class="org-keyword">return</span> s;
+        }
+    }, m_connection);
+}
+</pre>
+</div>
+
+<p>
+I personally prefer to define the functor explicitly as we are then able to create new state transitions without having to touch the implementation of the <code>Connection</code> class and thus not add methods to its public API.
+However, this is largely a matter of taste.
+</p>
+
+<p>
+We were able to eliminate an entire class of bugs in our finite state machine, reduce its memory footprint and improve the readability of state transitions.
+I don&rsquo;t know about you, but I am finding this pretty exciting!
+</p>
+</div>
+</div>
+</section>
+
+<section id="outline-container-org9c3fdac" class="outline-2">
+<h2 id="org9c3fdac">Conclusion</h2>
+<div class="outline-text-2" id="text-org9c3fdac">
+<p>
+C++ finally has a complete set of algebraic data-types.
+They are not quite as general as what you would find in functional programming languages, notably we can not define recursive variants.
+However, they still enable interesting improvements to everyday code bases ranging form eliminating bugs, to reducing memory usage.
+Furthermore, their main advantage is that they allow us to explicitly state the intent behind our design and thus improve the readability of the code we write.
+</p>
+</div>
+</section>
+</main>
+<footer id="postamble" class="status">
+<p class='disclaimer'>The postings on this site are my own and don't necessarily represent my employer’s positions, strategies or opinions.</p>
+
+<p>Last updated 29 Sep. 2021. Built with <a href="https://www.gnu.org/software/emacs/">Emacs</a> 27.2 (<a href="https://orgmode.org">Org</a> mode 9.4.6). <a href="/README.html">Details</a>.</p>
+</footer>
+</body>
+</html>

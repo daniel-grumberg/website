@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0"
+     xmlns:content="http://purl.org/rss/1.0/modules/content/"
+     xmlns:wfw="http://wellformedweb.org/CommentAPI/"
+     xmlns:dc="http://purl.org/dc/elements/1.1/"
+     xmlns:atom="http://www.w3.org/2005/Atom"
+     xmlns:sy="http://purl.org/rss/1.0/modules/syndication/"
+     xmlns:slash="http://purl.org/rss/1.0/modules/slash/"
+     xmlns:georss="http://www.georss.org/georss"
+     xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#"
+     xmlns:media="http://search.yahoo.com/mrss/"><channel>
+  <title>Daniel Grumberg</title>
+  <atom:link href="https://www.dangrumberg.com/rss.xml" rel="self" type="application/rss+xml" />
+  <link>https://www.dangrumberg.com</link>
+  <description><![CDATA[]]></description>
+  <language>en</language>
+  <pubDate>Wed, 29 Sep 2021 18:25:31 +0000</pubDate>
+  <lastBuildDate>Wed, 29 Sep 2021 18:25:31 +0000</lastBuildDate>
+  <generator>Emacs 27.2 Org-mode 9.4.6</generator>
+  <webMaster>root@6018696dd316 (root)</webMaster>
+  <image>
+    <url>https://orgmode.org/img/org-mode-unicorn-logo.png</url>
+    <title>Daniel Grumberg</title>
+    <link>https://www.dangrumberg.com</link>
+  </image>
+
+
+  <item>
+    <title>Leveraging algebraic types in C++</title>
+    <link>https://www.dangrumberg.com/leveraging-variadics/index.html</link>
+    <author>root@6018696dd316 (root)</author>
+    <guid isPermaLink="false">https://www.dangrumberg.com/leveraging-variadics/index.html</guid>
+    <pubDate>Sun, 01 Jul 2018 00:00:00 +0000</pubDate>
+
+    <description><![CDATA[<p>
+    Introduction
+    </p>
+
+    <p>
+    Today, we will be looking at the new flagship variadic types that are offered in modern C++ <a href="http://en.cppreference.com/w/cpp/utility/tuple"><code>std::tuple</code></a> and <a href="http://en.cppreference.com/w/cpp/utility/variant/variant"><code>std::variant</code></a>.
+    This post is not meant to teach you how to implement your own variadic templates, if you are into that check out my <a href=" ../variadic-templates/index.html">previous post</a>.
+    Instead, I focus on demonstrating the usage of the standard library's own variadic types, so don't sweat it if you are not a template meta-programming expert.
+    </p>
+
+    <p>
+    One of the main reasons variadic templates were introduced to the language in the C++11 standard was to enable the definitions of the product and sum types.
+    People refer to these as algebraic types due to the connection to algebra and set theory, but don't let that scare you away.
+    These are namely, <code>std::tuple</code> (introduced in C++11) and <code>std::variant</code> (introduced C++17) in that order.
+    </p>
+
+    <p>
+    Tuples are what you would expect if you have encountered them in other languages...
+    </p>
+    ]]></description>
+  </item>
+  <item>
+    <title>A safer printf with variadic templates</title>
+    <link>https://www.dangrumberg.com/safe-printf/index.html</link>
+    <author>root@6018696dd316 (root)</author>
+    <guid isPermaLink="false">https://www.dangrumberg.com/safe-printf/index.html</guid>
+    <pubDate>Wed, 10 Jan 2018 00:00:00 +0000</pubDate>
+
+    <description><![CDATA[<p>
+    Introduction
+    </p>
+
+    <p>
+    How many of you use the <code>printf</code> family of functions? Quite a lot, I assume.
+    The functions come with some advantages over the standard output streams (<code>cout</code>, <code>cerr</code>, etc): - They are plain C and write directly to the underlying POSIX file descriptor, they are thus thread-safe.
+    They are somewhat faster as they don't rely on operator overloading and thus dynamic dispatch through virtual function tables.
+    This StackOverflow <a href="https://stackoverflow.com/questions/17671772/c11-variadic-printf-performance">post</a> should give you some numbers if you care.
+    Most people probably don't/shouldn't care about this.
+    They are ubiquitous, well-known, and specifying precision and width is arguably simpler than it is in the stream idiom.
+    </p>
+
+    <p>
+    However, <code>printf</code> and all its friends suffer from one big drawback, type safety, which keeps bringing people back to streams.
+    Have you ever provided <code>printf</code> or worse <code>scanf</code> the wrong format string for what you were trying to achieve? I know I have.....
+    </p>
+    ]]></description>
+  </item>
+  <item>
+    <title>Introduction to Variadic templates</title>
+    <link>https://www.dangrumberg.com/variadic-templates/index.html</link>
+    <author>root@6018696dd316 (root)</author>
+    <guid isPermaLink="false">https://www.dangrumberg.com/variadic-templates/index.html</guid>
+    <pubDate>Tue, 26 Dec 2017 00:00:00 +0000</pubDate>
+
+    <description><![CDATA[<p>
+    This posts serves mostly as quick introduction to the syntax of variadic templates.
+    I will be shortly building upon this post to show you guys how to leverage this addition to the C++ meta-programming facilities to improve type-safety of your code.
+    I will also show you then how to use some the flagship new types in modern C++ that rely upon this facility <a href="http://en.cppreference.com/w/cpp/utility/tuple"><code>std::tuple</code></a> and <a href="http://en.cppreference.com/w/cpp/utility/variant/variant)"><code>std::variant</code></a>.
+    </p>
+
+    <p>
+    Motivation
+    </p>
+
+    <p>
+    Variadic templates have been introduced to the language for roughly three reasons:
+    </p>
+
+    <p>
+    Define type-safe variadic functions. All of us have messed up using <code>scanf</code> at some point, and those of us who have ever written C99 or C++03 style variadic functions will know the pain that comes with automatic variadic argument promotions and the <code>va_arg</code> family of macros. Writing variadic macros is even more painful...
+    Define algebraic types without having to jump through too many hoops, that is <code>std::tuple</code> and <code>std::variant</code>...
+    </p>
+    ]]></description>
+  </item>
+</channel>
+</rss>

@@ -1,0 +1,131 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=Oswald:wght@200;300;400;500;600;700&display=swap');
+
+html {
+    margin: 15px;
+    background-color: #fefefa;
+    display: block;
+    text-align: justify;
+    font-size: 1.25rem;
+    font-family: 'Old Standard TT', serif;
+    text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3 {
+    font-family: 'Oswald', sans-serif;
+    font-weight: normal;
+}
+
+header h1 {
+    text-decoration: underline;
+}
+
+header .subtitle {
+    opacity: .8;
+}
+
+a {
+    color: inherit;
+    background-color: inherit;
+    text-decoration: underline;
+}
+
+a:hover {
+    text-shadow: -.25px -.25px 0 black,
+                 .25px .25px black;
+}
+
+body {
+    margin: 0 auto;
+    max-width: 800px;
+}
+
+nav a {
+    margin-right: 2rem;
+}
+
+nav {
+    font-family: 'Oswald', sans-serif;
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+}
+
+nav #contact {
+    float: right;
+}
+
+nav #contact > a {
+    margin-right: 0;
+    margin-left: 1rem;
+}
+
+footer {
+    margin-top: 2rem;
+    font-size: 0.75rem;
+    color: #888888;
+}
+
+footer p {
+    text-align: center;
+}
+
+a[href^="#coderef"],
+code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .8rem;
+}
+
+.org-src-container {
+    background-color: #fffff8;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .8rem;
+    border-radius: .2em;
+    border: 1px solid black;
+    padding: .4em 1.2em .4em;
+}
+
+.org-src-container pre {
+    padding: 0 0 0 0;
+    white-space: pre-wrap;
+}
+
+table {
+    margin: 1em auto;
+    border: 2px solid black;
+    border-collapse: collapse;
+}
+
+table thead {
+    border-bottom: 2px solid;
+}
+
+
+table th {
+    font-weight: bold;
+}
+
+table th,
+table td {
+    padding: .3em .6em;
+    border: 1px solid #d3d3d3;
+    vertical-align: middle;
+}
+
+@media print {
+    html {
+        background-color: #ffffff;
+        font-size: 1rem;
+        padding: 10mm 15mm 10mm 15mm;
+    }
+
+    body footer,
+    body nav {
+        display: none;
+    }
+
+    body .org-src-container {
+        background-color: #ffffff;
+        page-break-inside: avoid;
+        -webkit-print-color-adjust: exact; /* Ensure that keyword colors get printed correctly */
+        color-adjust: exact; /* Ditto for firefox */
+    }
+}

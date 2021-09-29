@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- 29 Sep. 2021 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daniel Grumberg&rsquo;s homepage</title>
+<meta name="generator" content="Org mode">
+<meta name="author" content="root">
+<script src="https://kit.fontawesome.com/9c9a6c64c4.js" crossorigin="anonymous"></script>
+<meta description='The personal website and blog of Daniel Grumberg'/>
+<link rel='apple-touch-icon' sizes='180x180' href='/assets/apple-touch-icon.png'/>
+<link rel='icon' type='image/png' sizes='32x32' href='/assets/favicon-32x32.png'/>
+<link rel='icon' type='image/png' sizes='16x16' href='/assets/favicon-16x16.png'/>
+<link rel='stylesheet' href='/css/code.css' type='text/css'/>
+<link rel='stylesheet' href='/css/site.css' type='text/css'/>
+<link rel='alternate' type='application+rss/xml' title='The personal website and blog of Daniel Grumberg' href='/rss.xml'/>
+</head>
+<body>
+<header id="preamble" class="status">
+<nav>
+    <a href="/">About</a>
+    <a href="/posts/archive.html">Blog</a>
+  <div id="contact">
+    <a href="/rss.xml"><i class="fas fa-rss-square"></i></a>
+    <a href="/assets/cv.pdf"><i class="fas fa-file"></i></a>
+    <a href="mailto:dany.grumberg@gmail.com"><i class="fas fa-envelope"></i></a>
+    <a href="https://github.com/daniel-grumberg"><i class="fab fa-github-square"></i></a>
+    <a href="https//twitter.com/danygrumberg"><i class="fab fa-twitter-square"></i></a>
+    <a href="https://www.linkedin.com/in/daniel-grumberg/"><i class="fab fa-linkedin"></i></a>
+  </div>
+</nav>
+</header>
+<main id="content">
+<header>
+<h1 class="title">Daniel Grumberg&rsquo;s homepage</h1>
+</header><p>
+The deployment for this website is all pretty self-contained, you just need a recent emacs installation (tested with 26.3).
+In order to generate the pages all you need to do is grab the sources from <a href="https://github.com/daniel-grumberg/website">here</a> and use the provided Makefile.
+Emacs will take care of fetching the latest dependencies and generating the website in the public directory.
+Don&rsquo;t worry though, this won&rsquo;t make changes to your configuration, as the Makefile ignores your own <code>.emacs</code> or <code>.emacs.d/init.el</code> and uses the provided <code>publish.el</code> to download packages and to build the website.
+You should read <code>publish.el</code> if you are interested in how to emulate this setup.
+</p>
+</main>
+<footer id="postamble" class="status">
+<p class='disclaimer'>The postings on this site are my own and don't necessarily represent my employer’s positions, strategies or opinions.</p>
+
+<p>Last updated 29 Sep. 2021. Built with <a href="https://www.gnu.org/software/emacs/">Emacs</a> 27.2 (<a href="https://orgmode.org">Org</a> mode 9.4.6). <a href="/README.html">Details</a>.</p>
+</footer>
+</body>
+</html>

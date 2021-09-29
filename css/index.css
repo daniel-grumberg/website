@@ -1,0 +1,7 @@
+.org-ul li a {
+    display: inline;
+}
+
+.org-ul li .timestamp-wrapper {
+    float: right;
+}

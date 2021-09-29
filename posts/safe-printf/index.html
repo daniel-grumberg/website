@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- 29 Sep. 2021 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A safer printf with variadic templates</title>
+<meta name="generator" content="Org mode">
+<meta name="author" content="Daniel Grumberg">
+<script src="https://kit.fontawesome.com/9c9a6c64c4.js" crossorigin="anonymous"></script>
+<meta description='The personal website and blog of Daniel Grumberg'/>
+<link rel='apple-touch-icon' sizes='180x180' href='/assets/apple-touch-icon.png'/>
+<link rel='icon' type='image/png' sizes='32x32' href='/assets/favicon-32x32.png'/>
+<link rel='icon' type='image/png' sizes='16x16' href='/assets/favicon-16x16.png'/>
+<link rel='stylesheet' href='/css/code.css' type='text/css'/>
+<link rel='stylesheet' href='/css/site.css' type='text/css'/>
+<link rel='alternate' type='application+rss/xml' title='The personal website and blog of Daniel Grumberg' href='/rss.xml'/>
+</head>
+<body>
+<header id="preamble" class="status">
+<nav>
+    <a href="/">About</a>
+    <a href="/posts/archive.html">Blog</a>
+  <div id="contact">
+    <a href="/rss.xml"><i class="fas fa-rss-square"></i></a>
+    <a href="/assets/cv.pdf"><i class="fas fa-file"></i></a>
+    <a href="mailto:dany.grumberg@gmail.com"><i class="fas fa-envelope"></i></a>
+    <a href="https://github.com/daniel-grumberg"><i class="fab fa-github-square"></i></a>
+    <a href="https//twitter.com/danygrumberg"><i class="fab fa-twitter-square"></i></a>
+    <a href="https://www.linkedin.com/in/daniel-grumberg/"><i class="fab fa-linkedin"></i></a>
+  </div>
+</nav>
+</header>
+<main id="content">
+<header>
+<h1 class="title">A safer printf with variadic templates</h1>
+<p class="subtitle">Jan. 10 2018 by Daniel Grumberg</p>
+</header>
+<section id="outline-container-org7fdf8c9" class="outline-2">
+<h2 id="org7fdf8c9">Introduction</h2>
+<div class="outline-text-2" id="text-org7fdf8c9">
+<p>
+How many of you use the <code>printf</code> family of functions? Quite a lot, I assume.
+The functions come with some advantages over the standard output streams (<code>cout</code>, <code>cerr</code>, etc): - They are plain C and write directly to the underlying POSIX file descriptor, they are thus thread-safe.
+</p>
+<ul class="org-ul">
+<li>They are somewhat faster as they don&rsquo;t rely on operator overloading and thus dynamic dispatch through virtual function tables.</li>
+</ul>
+<p>
+This StackOverflow <a href="https://stackoverflow.com/questions/17671772/c11-variadic-printf-performance">post</a> should give you some numbers if you care.
+Most people probably don&rsquo;t/shouldn&rsquo;t care about this.
+</p>
+<ul class="org-ul">
+<li>They are ubiquitous, well-known, and specifying precision and width is arguably simpler than it is in the stream idiom.</li>
+</ul>
+
+<p>
+However, <code>printf</code> and all its friends suffer from one big drawback, type safety, which keeps bringing people back to streams.
+Have you ever provided <code>printf</code> or worse <code>scanf</code> the wrong format string for what you were trying to achieve? I know I have&#x2026;
+</p>
+
+<p>
+All standard C libraries implement <code>printf</code> using the <code>va_arg</code> family of macros.
+Beyond being cumbersome, and error-prone to use, they delegate all the argument typing and &ldquo;checking&rdquo; to the run-time program.
+Most people agree that typing is better left to compile-time, where mistakes and errors are caught before the program gets a chance to run.
+Since C++11, we have variadic templates to help us with implementing such functions.
+</p>
+
+<p>
+Quite a few people have proposed implementations of type-safe <code>printf</code> alternatives.
+I will not consider here things like <code>boost::format</code> or the <code>fmt</code> library as they implement a new formatting string language and I am only exploring in drop-in replacements for <code>printf</code>.
+The most notable discussion of this topic was done by Andrei Alexandrescu in <a href="https://www.youtube.com/watch?v~_zgq6_zFNGY">this talk</a> at Going Native 2012.
+He proposes a nice and simple two-step approach with one traversal of the string and arguments to type check them, and then just delegates the functionality to <code>std::printf</code>.
+He argues the checks can be easily disabled in release mode through the use of the <code>NDEBUG</code> macro to avoid any performance overhead.
+This approach works great, as no one ever uses <code>printf</code> to print large strings.
+However, I will be presenting a skeleton implementation for checking the arguments in place to explore implementing a safe <code>printf</code> from first principles as a go to facility for outputting to <code>stdout</code>.
+The main drawback of my approach is that all the characters in the format string until the invalid format specifier are outputted anyway.
+If you do care about this a lot, Alexandrescu&rsquo;s approach is better suited to your needs.
+</p>
+
+<p>
+Before you proceed any further you need to make sure you know how to use variadic templates in C++, if you are new to the topic or if you need a quick refresher you might want to check out my introductory <a href="%7B%7B%20site.baseurl%20%7D%7D%7B%%20post_url%202017-12-26-variadic-templates%20%%7D">post</a> to the topic.
+</p>
+</div>
+</section>
+
+<section id="outline-container-orgc982514" class="outline-2">
+<h2 id="orgc982514">Argument normalisation</h2>
+<div class="outline-text-2" id="text-orgc982514">
+<p>
+The first thing we have to notice, that <code>printf</code> performs argument normalization.
+Indeed, any integral type is considered to be a <code>long</code> (unless specified otherwise with width modifiers) and every floating point number is a <code>double</code> (again unless specified otherwise).
+Furthermore, we want to allow users to natively be able to format <code>std::string</code>.
+I choose to implement this functionality through a templated function as follows:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-keyword">template</span> &lt;<span class="org-keyword">typename</span> <span class="org-type">T</span>&gt;
+<span class="org-keyword">typename</span> <span class="org-constant">std</span>::<span class="org-constant">enable_if</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">is_integral</span>&lt;<span class="org-type">T</span>&gt;::value, <span class="org-type">long</span>&gt;::<span class="org-type">type</span>
+<span class="org-function-name">normalize_arg</span>(<span class="org-type">T</span> <span class="org-variable-name">arg</span>) { <span class="org-keyword">return</span> arg; }
+
+<span class="org-keyword">template</span> &lt;<span class="org-keyword">typename</span> <span class="org-type">T</span>&gt;
+<span class="org-keyword">typename</span> <span class="org-constant">std</span>::<span class="org-constant">enable_if</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">is_floating_point</span>&lt;<span class="org-type">T</span>&gt;::value, <span class="org-type">double</span>&gt;::<span class="org-type">type</span>
+<span class="org-function-name">normalize_arg</span>(<span class="org-type">T</span> <span class="org-variable-name">arg</span>) { <span class="org-keyword">return</span> arg; }
+
+<span class="org-keyword">template</span> &lt;<span class="org-keyword">typename</span> <span class="org-type">T</span>&gt;
+<span class="org-keyword">typename</span> <span class="org-constant">std</span>::<span class="org-constant">enable_if</span>&lt;<span class="org-constant">std</span>::<span class="org-constant">is_pointer</span>&lt;<span class="org-type">T</span>&gt;::value, <span class="org-type">T</span>&gt;::<span class="org-type">type</span>
+<span class="org-function-name">normalize_arg</span>(<span class="org-type">T</span> <span class="org-variable-name">arg</span>) { <span class="org-keyword">return</span> arg; }
+
+<span class="org-keyword">const</span> <span class="org-type">char</span>* <span class="org-function-name">normalize_arg</span>(<span class="org-constant">std</span>::<span class="org-type">string</span> <span class="org-keyword">const</span>&amp; <span class="org-variable-name">str</span>) { <span class="org-keyword">return</span> str.c_str(); }
+</pre>
+</div>
+
+<p>
+The aim here is to cast types having a certain trait to one of the types discussed above.
+We use the convenient <a href="http://en.cppreference.com/w/cpp/types/enable_if"><code>std::enable_if</code></a> to overload the return type of <code>normalize_args</code> based on traits of the template type.
+We also provide an overload that fully specialises the template where we convert <code>std::string</code> to its underlying C-style string.
+We need to do this because for simplicity reasons as we plan to delegate the actual formatting to <code>printf</code>.
+Of course, if we were going to implement the functionality from first principles this is an unnecessary restriction.
+</p>
+</div>
+</section>
+
+<section id="outline-container-orgbf0c18c" class="outline-2">
+<h2 id="orgbf0c18c">Printing to standard out</h2>
+<div class="outline-text-2" id="text-orgbf0c18c">
+<p>
+Once we have the argument normalisation building block we are able to define the shape of our top level <code>safe_printf</code> as follows:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-keyword">template</span> &lt;<span class="org-keyword">typename</span> ...<span class="org-type">Params</span>&gt;
+<span class="org-type">void</span> <span class="org-function-name">safe_printf</span>(<span class="org-keyword">const</span> <span class="org-type">char</span> *<span class="org-variable-name">str</span>, <span class="org-type">Params</span> <span class="org-keyword">const</span>&amp; ...<span class="org-variable-name">parameters</span>)
+{
+    flockfile(stdout);
+    safe_printf_impl(str, normalize_arg(parameters)...);
+    funlockfile(stdout);
+}
+</pre>
+</div>
+
+<p>
+As mentioned earlier, the <code>printf</code> family of functions works well with concurrent processes because they acquire the file lock associated with <code>stdout</code>.
+The simplest implementation of this functionality I could think of is wrapping the main body of work with calls to <code>flockfile</code> and <code>funlockfile</code> from the C standard library in the <code>stdio.h</code> header.
+Let&rsquo;s now take a look at the main implementation:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-type">void</span> <span class="org-function-name">safe_printf_impl</span>(<span class="org-keyword">const</span> <span class="org-type">char</span> *<span class="org-variable-name">str</span>) {
+    <span class="org-comment-delimiter">// </span><span class="org-comment">We already own the lock so we might as well use the unlocked version</span>
+    <span class="org-keyword">for</span>(; *str &amp;&amp; (*str != <span class="org-string">'%'</span> || *(++str) == <span class="org-string">'%'</span>); ++str) putchar_unlocked(*str);
+
+    <span class="org-keyword">if</span> (*str) <span class="org-keyword">throw</span> <span class="org-constant">std</span>::runtime_error(<span class="org-string">"Too few arguments were passed to safe_printf"</span>);
+}
+</pre>
+</div>
+
+<p>
+The above code snippet represents the base case of the compile-time recursion.
+The purpose here, is to keep printing the rest of the format string if we run out of formatting parameters.
+The last line of this function throws a <code>std::runtime_error</code> if we detect a format specifier in the format string.
+This is because we cannot format missing parameters and thus the call to <code>safe_printf</code> is invalid and does not type-check.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-keyword">template</span> &lt;<span class="org-keyword">typename</span> <span class="org-type">Param</span>, <span class="org-keyword">typename</span> ...<span class="org-type">Params</span>&gt;
+<span class="org-type">void</span> <span class="org-function-name">safe_printf_impl</span>(<span class="org-keyword">const</span> <span class="org-type">char</span> *<span class="org-variable-name">str</span>, <span class="org-type">Param</span> <span class="org-variable-name">parameter</span>, <span class="org-type">Params</span>... <span class="org-variable-name">parameters</span>)
+{
+    <span class="org-comment-delimiter">// </span><span class="org-comment">We already own the lock so we might as well use the unlocked version</span>
+    <span class="org-keyword">for</span>(; *str &amp;&amp; (*str != <span class="org-string">'%'</span> || *(++str) == <span class="org-string">'%'</span>); ++str) putchar_unlocked(*str);
+
+    validate_type_parameter&lt;<span class="org-type">Param</span>&gt;(*str);
+    <span class="org-keyword">const</span> <span class="org-type">char</span> <span class="org-variable-name">format</span>[3] = {<span class="org-string">'%'</span>, *str, <span class="org-string">'\0'</span>};
+    printf(format, parameter);
+
+    safe_printf_impl(++str, parameters...);
+}
+</pre>
+</div>
+
+<p>
+If we have a list of at least one parameter to format, we want to output the characters in the format string as usual until we hit a format specifier.
+We then proceed to make sure that the specifier agrees with the type of the first parameter.
+If this check succeeds we can format the parameter as usual.
+The last line is interesting as we now &ldquo;recurse&rdquo; (we are calling a different template instantiation) to process the remainder of the string with the remainder of the parameters.
+</p>
+
+<p>
+I chose to use type traits to implement <code>validate_type_parameter</code> I find it a more expressive technique for checking type properties.
+An alternative to this scheme is to specify a template specialisation for each possible type check inside each one if the format specifier is correct.
+My implementation is given below:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-preprocessor">#define</span> <span class="org-function-name">ENFORCE</span>(<span class="org-variable-name">A</span>) <span class="org-keyword">if</span> (<span class="org-negation-char">!</span>(A)) <span class="org-keyword">throw</span> <span class="org-constant">std</span>::runtime_error(<span class="org-string">"Type did not match format specifier"</span>)
+
+<span class="org-keyword">template</span> &lt;<span class="org-keyword">typename</span> <span class="org-type">Param</span>&gt;
+<span class="org-type">void</span> <span class="org-function-name">validate_type_parameter</span>(<span class="org-type">char</span> <span class="org-variable-name">format_specifier</span>)
+{
+    <span class="org-keyword">switch</span>(format_specifier)
+    {
+        <span class="org-keyword">default</span>: <span class="org-keyword">throw</span> <span class="org-constant">std</span>::runtime_error(<span class="org-string">"Invalid format specifier, only f, d and s are allowed"</span>);
+        <span class="org-keyword">case</span> <span class="org-string">'f'</span>:
+            ENFORCE(<span class="org-constant">std</span>::<span class="org-constant">is_floating_point</span>&lt;<span class="org-type">Param</span>&gt;::value);
+            <span class="org-keyword">break</span>;
+        <span class="org-keyword">case</span> <span class="org-string">'d'</span>:
+            ENFORCE(<span class="org-constant">std</span>::<span class="org-constant">is_integral</span>&lt;<span class="org-type">Param</span>&gt;::value);
+            <span class="org-keyword">break</span>;
+        <span class="org-keyword">case</span> <span class="org-string">'s'</span>:
+            <span class="org-keyword">constexpr</span> <span class="org-type">bool</span> <span class="org-variable-name">is_valid_c_str</span>
+                = <span class="org-constant">std</span>::<span class="org-constant">is_same</span>&lt;<span class="org-type">Param</span>, <span class="org-keyword">const</span> <span class="org-type">char</span> *&gt;::value || <span class="org-constant">std</span>::<span class="org-constant">is_same</span>&lt;<span class="org-type">Param</span>, <span class="org-type">char</span> *&gt;::value;
+            ENFORCE(is_valid_c_str);
+            <span class="org-keyword">break</span>;
+    }
+}
+</pre>
+</div>
+</div>
+</section>
+
+<section id="outline-container-orgebf138c" class="outline-2">
+<h2 id="orgebf138c">Conclusion</h2>
+<div class="outline-text-2" id="text-orgebf138c">
+<p>
+The cool thing is that C++ supports template argument deduction, which allows you to to truly use this implementation as a drop-in replacement for <code>printf</code>.
+This achieves exactly what we want in the sense that we just aim to check if the arguments we supplied can be correctly printed using the supplied format string.
+Here is a quick example of how this implementation behaves:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-constant">std</span>::<span class="org-type">string</span> <span class="org-variable-name">world</span>(<span class="org-string">"world"</span>);
+safe_printf(<span class="org-string">"Hello %s!. I am %f%% sure this works.\n"</span>, world, 0.99f); <span class="org-comment-delimiter">// </span><span class="org-comment">This works as expected</span>
+safe_printf(<span class="org-string">"Hello %s!. I am %f%% sure this works%s.\n"</span>, world, 0.99f); <span class="org-comment-delimiter">// </span><span class="org-comment">This fails</span>
+safe_printf(<span class="org-string">"Hello %s!. I am %d%% sure this works.\n"</span>, world, 0.99f); <span class="org-comment-delimiter">// </span><span class="org-comment">This fails as well</span>
+</pre>
+</div>
+
+<p>
+The implementation of <code>safe_printf</code> I just presented does not implement, the full <code>printf</code> functionality.
+But the main idea for a drop-in replacement of classic <code>printf</code> is shown.
+Also, I would like to find a way of avoiding to produce output for invalid calls without otherwise introducing buffering that would not happen in the first place, if anyone knows how get in touch via email or in the comments section of this <a href="https://gist.github.com/daniel-grumberg/15a76740aa82f38638efe95a5ad90605">gist</a> that has the full code.
+</p>
+</div>
+</section>
+</main>
+<footer id="postamble" class="status">
+<p class='disclaimer'>The postings on this site are my own and don't necessarily represent my employer’s positions, strategies or opinions.</p>
+
+<p>Last updated 29 Sep. 2021. Built with <a href="https://www.gnu.org/software/emacs/">Emacs</a> 27.2 (<a href="https://orgmode.org">Org</a> mode 9.4.6). <a href="/README.html">Details</a>.</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- 29 Sep. 2021 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Introduction to Variadic templates</title>
+<meta name="generator" content="Org mode">
+<meta name="author" content="Daniel Grumberg">
+<script src="https://kit.fontawesome.com/9c9a6c64c4.js" crossorigin="anonymous"></script>
+<meta description='The personal website and blog of Daniel Grumberg'/>
+<link rel='apple-touch-icon' sizes='180x180' href='/assets/apple-touch-icon.png'/>
+<link rel='icon' type='image/png' sizes='32x32' href='/assets/favicon-32x32.png'/>
+<link rel='icon' type='image/png' sizes='16x16' href='/assets/favicon-16x16.png'/>
+<link rel='stylesheet' href='/css/code.css' type='text/css'/>
+<link rel='stylesheet' href='/css/site.css' type='text/css'/>
+<link rel='alternate' type='application+rss/xml' title='The personal website and blog of Daniel Grumberg' href='/rss.xml'/>
+</head>
+<body>
+<header id="preamble" class="status">
+<nav>
+    <a href="/">About</a>
+    <a href="/posts/archive.html">Blog</a>
+  <div id="contact">
+    <a href="/rss.xml"><i class="fas fa-rss-square"></i></a>
+    <a href="/assets/cv.pdf"><i class="fas fa-file"></i></a>
+    <a href="mailto:dany.grumberg@gmail.com"><i class="fas fa-envelope"></i></a>
+    <a href="https://github.com/daniel-grumberg"><i class="fab fa-github-square"></i></a>
+    <a href="https//twitter.com/danygrumberg"><i class="fab fa-twitter-square"></i></a>
+    <a href="https://www.linkedin.com/in/daniel-grumberg/"><i class="fab fa-linkedin"></i></a>
+  </div>
+</nav>
+</header>
+<main id="content">
+<header>
+<h1 class="title">Introduction to Variadic templates</h1>
+<p class="subtitle">Dec. 26 2017 by Daniel Grumberg</p>
+</header><p>
+This posts serves mostly as quick introduction to the syntax of variadic templates.
+I will be shortly building upon this post to show you guys how to leverage this addition to the C++ meta-programming facilities to improve type-safety of your code.
+I will also show you then how to use some the flagship new types in modern C++ that rely upon this facility <a href="http://en.cppreference.com/w/cpp/utility/tuple"><code>std::tuple</code></a> and <a href="http://en.cppreference.com/w/cpp/utility/variant/variant)"><code>std::variant</code></a>.
+</p>
+
+<section id="outline-container-orgd8b7793" class="outline-2">
+<h2 id="orgd8b7793">Motivation</h2>
+<div class="outline-text-2" id="text-orgd8b7793">
+<p>
+Variadic templates have been introduced to the language for roughly three reasons:
+</p>
+
+<ol class="org-ol">
+<li>Define type-safe variadic functions. All of us have messed up using <code>scanf</code> at some point, and those of us who have ever written C99 or C++03 style variadic functions will know the pain that comes with automatic variadic argument promotions and the <code>va_arg</code> family of macros. Writing variadic macros is even more painful&#x2026;</li>
+
+<li>Define algebraic types without having to jump through too many hoops, that is <code>std::tuple</code> and <code>std::variant</code>.</li>
+
+<li>Enable a variable numbers of settings and parameters in policy based designs. This is not something I will talk about as I myself don&rsquo;t know that much about designing software that way.</li>
+</ol>
+</div>
+</section>
+
+<section id="outline-container-org47b228a" class="outline-2">
+<h2 id="org47b228a">Basic syntax overview</h2>
+<div class="outline-text-2" id="text-org47b228a">
+<p>
+Variadic templates have introduced very little syntax to the C++11 standard, only new meanings for the ellipsis <code>...</code> operator as well as a new operator <code>sizeof...</code> (which is very different from the good old <code>sizeof</code>).
+</p>
+
+<p>
+The ellipsis operator can be used in three distinct contexts:
+</p>
+
+<ol class="org-ol">
+<li><p>
+In the template parameter list it defines a template parameter pack, that is a variable length list of template parameters. It looks as follows:
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-keyword">template</span>&lt;<span class="org-keyword">typename</span>... <span class="org-type">Ts</span>&gt;
+<span class="org-keyword">class</span> <span class="org-type">C</span> { <span class="org-comment-delimiter">/* </span><span class="org-comment">Some code parametrised by all the types in Ts</span><span class="org-comment-delimiter"> */</span> };
+</pre>
+</div></li>
+<li><p>
+Similarly in the argument list of a function it defines a parameter pack that is a variable length list of arguments of the types defined in the template parameter list. This is what it looks like:
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-keyword">template</span>&lt;<span class="org-keyword">typename</span>... <span class="org-type">Ts</span>&gt;
+<span class="org-type">void</span> <span class="org-function-name">foo</span>(<span class="org-keyword">const</span> <span class="org-type">Ts</span>&amp;... <span class="org-variable-name">vs</span>) { <span class="org-comment-delimiter">/* </span><span class="org-comment">Some code using the values vs of type Ts</span><span class="org-comment-delimiter"> */</span> }
+</pre>
+</div>
+<p>
+At this point it is worth noting that in a primary class template, the template parameter pack must be the final parameter in the template parameter list. In a function template, it is correct to put it earlier in the template parameter list, if and only if all the other template arguments can be deduced from the function arguments, or have default values. To show this better this I have a code snippet from <a href="http://en.cppreference.com/w/cpp/language/parameter_pack">cppreference</a>:
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-keyword">template</span>&lt;<span class="org-keyword">typename</span>... <span class="org-type">Ts</span>, <span class="org-keyword">typename</span> <span class="org-type">U</span>&gt; <span class="org-keyword">struct</span> <span class="org-type">Invalid</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">Error: Ts.. not at the end</span>
+
+<span class="org-keyword">template</span>&lt;<span class="org-keyword">typename</span> ...<span class="org-type">Ts</span>, <span class="org-keyword">typename</span> <span class="org-type">U</span>, <span class="org-keyword">typename</span>=<span class="org-type">void</span>&gt;
+<span class="org-type">void</span> <span class="org-function-name">valid</span>(<span class="org-type">U</span>, <span class="org-type">Ts</span>...);     <span class="org-comment-delimiter">// </span><span class="org-comment">OK: can deduce U</span>
+<span class="org-comment-delimiter">// </span><span class="org-comment">void valid(Ts..., U);  // Can't be used: Ts... is a non-deduced context in this position</span>
+
+valid(1.0, 1, 2, 3);      <span class="org-comment-delimiter">// </span><span class="org-comment">OK: deduces U as double, Ts as {int,int,int}</span>
+</pre>
+</div></li>
+<li><p>
+Finally, it defines a smart contextual expansion of the parameter pack(s) to its left. This is known as pack expansion and it is governed by the following rules:
+</p>
+<table>
+
+
+<colgroup>
+<col  class="org-left">
+
+<col  class="org-left">
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Usage</th>
+<th scope="col" class="org-left">Expansion</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left"><code>Ts...</code></td>
+<td class="org-left"><code>T1</code>, &#x2026;, <code>Tn</code></td>
+</tr>
+
+<tr>
+<td class="org-left"><code>Ts&amp;&amp;...</code></td>
+<td class="org-left"><code>T1&amp;&amp;</code>, &#x2026;, <code>Tn&amp;&amp;&amp;</code></td>
+</tr>
+
+<tr>
+<td class="org-left"><code>x&lt;Ts&amp;, Y&gt;::z...</code></td>
+<td class="org-left"><code>x&lt;T1, Y&gt;::z</code>, &#x2026;, <code>x&lt;Tn, Y&gt;::z</code></td>
+</tr>
+
+<tr>
+<td class="org-left"><code>x&lt;Ts&amp;, Us&gt;::x...</code></td>
+<td class="org-left"><code>x&lt;T1&amp;, U1&gt;::z</code>, &#x2026;, <code>x&lt;Tn&amp;, Un&gt;::z</code></td>
+</tr>
+
+<tr>
+<td class="org-left"><code>func(5,v)...</code></td>
+<td class="org-left"><code>func(5, v1)</code>, &#x2026;, <code>func(5, vn)</code></td>
+</tr>
+</tbody>
+</table></li>
+</ol>
+
+<p>
+Pack expansions may occur in initializer lists, base class specifiers, inside class definitions, in template argument lists, and lambda capture lists.
+</p>
+</div>
+</section>
+
+<section id="outline-container-orga66db7e" class="outline-2">
+<h2 id="orga66db7e">Limitations</h2>
+<div class="outline-text-2" id="text-orga66db7e">
+<p>
+I want to touch on the fact that parameter packs are not first class citizens of the language, and thus we can not write anything like the following:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-keyword">template</span> &lt;<span class="org-keyword">typename</span>... <span class="org-type">Ts</span>&gt;
+<span class="org-type">void</span> <span class="org-function-name">foo</span>()
+{
+    <span class="org-type">Ts</span> <span class="org-variable-name">things</span>;
+    <span class="org-keyword">for</span> (<span class="org-type">T</span>&amp; <span class="org-variable-name">t</span> : things) doStuff(t);
+}
+</pre>
+</div>
+
+<p>
+The usage is actually constrained to the following two things:
+</p>
+
+<ol class="org-ol">
+<li>Apply <code>sizeof...</code> to the parameter pack: <code>sizeof...(args)</code>. This will not return the number of bytes occupied by the arguments, rather the number of arguments in the parameter pack itself.</li>
+
+<li>Expand the parameter pack using the rules described earlier.</li>
+</ol>
+
+<p>
+The usual concepts of iteration and mutation are not defined on parameter packs and people tend to program them in a fashion very similar to that of functional programming languages such as Haskell or Lisp.
+Although the syntax for dealing with variadic templates can be a bit awkward and complicated, the benefits are worth it if you have a genuine need for variable numbers of arguments, as it can greatly reduce the complexity of usage of your constructs.
+</p>
+</div>
+</section>
+
+<section id="outline-container-org854a616" class="outline-2">
+<h2 id="org854a616">Putting it all together</h2>
+<div class="outline-text-2" id="text-org854a616">
+<p>
+I now want to have a look at a very constrained example I found on HackerRank to see how these concepts (pun intended) are applied in practice.
+</p>
+
+<p>
+We wish to implement a function that given 64 or less <code>bool</code> template parameters will return the <code>uint64_t</code> they
+represent binary notation.
+</p>
+
+<p>
+The trick is to notice that the most significant bit, that is the first template argument, needs to be left-shifted by the reamining number of template arguments. In pseudo-code the structure looks as follows:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-type">uint64_t</span> <span class="org-function-name">bool2uint64</span>() { <span class="org-keyword">return</span> 0; }
+<span class="org-type">uint64_t</span> <span class="org-variable-name">bool2uint64</span>(msb, ...rest) { <span class="org-keyword">return</span> (msb &lt;&lt; len(rest)) | bool2uint64(rest...);}
+</pre>
+</div>
+
+<p>
+We can jump straight in and write something along the lines of a base case for the no more template parameters case.
+We could then define another specialization for the recursive case with a template parameter representing the head of the parameter list, and a template parameter pack to represent the tail of the list:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-type">uint64_t</span> <span class="org-function-name">bool2uint64</span>()
+{
+    <span class="org-keyword">return</span> 0;
+}
+
+<span class="org-keyword">template</span>&lt;<span class="org-type">bool</span> <span class="org-variable-name">Msb</span>, <span class="org-type">bool</span>... <span class="org-variable-name">RestBits</span>&gt;
+<span class="org-type">uint64_t</span> <span class="org-function-name">bool2uint64</span>()
+{
+    <span class="org-keyword">return</span> (Msb &lt;&lt; <span class="org-keyword">sizeof</span>...(RestBits)) | bool2uint64&lt;RestBits...&gt;();
+}
+</pre>
+</div>
+
+<p>
+Oops!
+This code does not compile because on the last &ldquo;recursive&rdquo; call, since the template parameter pack <code>RestBits</code> is empty and the function <code>template&lt;&gt; bool2uint64&lt;&gt;</code> would get called.
+The templated version is not the same as the non-templated base case.
+Furthermore, we would not be able to define the partially specialized form because that is simply not allowed by the language.
+Thankfully, partial template specialization is allowed for class types, and we can resort to the common idiom of delegating the work to a struct at compile time.
+Also we notice, that all this work can be done at compile time and thus can be marked as such with <code>constexpr</code>.
+The resulting implementation looks as follows:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-keyword">template</span>&lt;<span class="org-type">bool</span>... <span class="org-variable-name">RestBits</span>&gt; <span class="org-keyword">struct</span> <span class="org-type">Bool2UInt64</span>;
+
+<span class="org-keyword">template</span>&lt;&gt;
+<span class="org-keyword">struct</span> <span class="org-type">Bool2UInt64</span>&lt;&gt;
+    : <span class="org-constant">std</span>::<span class="org-type">integral_constant</span>&lt;<span class="org-type">uint64_t</span>, 0&gt; { };
+
+<span class="org-keyword">template</span>&lt;<span class="org-type">bool</span> <span class="org-variable-name">Msb</span>, <span class="org-type">bool</span>... <span class="org-variable-name">RestBits</span>&gt;
+<span class="org-keyword">struct</span> <span class="org-type">Bool2UInt64</span>&lt;Msb, RestBits...&gt;
+    : <span class="org-constant">std</span>::<span class="org-type">integral_constant</span>&lt;<span class="org-type">uint64_t</span>, (Msb &lt;&lt; <span class="org-keyword">sizeof</span>...(RestBits)) | <span class="org-constant">Bool2UInt64</span>&lt;RestBits...&gt;::value&gt; { };
+
+<span class="org-keyword">template</span>&lt;<span class="org-type">bool</span>... <span class="org-variable-name">Bits</span>&gt;
+<span class="org-keyword">constexpr</span> <span class="org-type">uint64_t</span> <span class="org-function-name">bool2uint64</span>()
+{
+    <span class="org-keyword">return</span> <span class="org-constant">Bool2UInt64</span>&lt;Bits...&gt;::value;
+}
+</pre>
+</div>
+
+<p>
+An interesting technique I have used here is to have <code>Bool2UInt64</code> inherit from <code>std::integral_constant&lt;T, V&gt;</code> defined in the <code>type_traits</code> header, which only contains a static constant expression <code>value</code> of type <code>T</code> and value <code>V</code>.
+This is a common pattern and <code>std::integral_constant</code> is perfect for this purpose as it offers an agreed-upon interface for accessing the result of the compile time computation.
+</p>
+
+<p>
+The usage of our new <code>bool2uint64</code> function is as follows:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-cpp"><span class="org-keyword">constexpr</span> <span class="org-type">uint64_t</span> <span class="org-variable-name">eleven</span> = bool2uint64&lt;<span class="org-constant">true</span>, <span class="org-constant">false</span>, <span class="org-constant">true</span>, <span class="org-constant">true</span>&gt;();
+static_assert(eleven == 11u, <span class="org-string">"we have not computed the right number!"</span>);
+</pre>
+</div>
+
+<p>
+Obviously this example has no practical usage but it shows all of the concepts put together, you can find a gist
+containing the full code <a href="https://gist.github.com/daniel-grumberg/33b2a5223341637f26533248c9d75f21">here</a>.
+Any comments you put on there will of course be read.
+</p>
+</div>
+</section>
+</main>
+<footer id="postamble" class="status">
+<p class='disclaimer'>The postings on this site are my own and don't necessarily represent my employer’s positions, strategies or opinions.</p>
+
+<p>Last updated 29 Sep. 2021. Built with <a href="https://www.gnu.org/software/emacs/">Emacs</a> 27.2 (<a href="https://orgmode.org">Org</a> mode 9.4.6). <a href="/README.html">Details</a>.</p>
+</footer>
+</body>
+</html>
